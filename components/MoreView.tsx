@@ -1,8 +1,9 @@
 "use client";
 
 import { useApp } from "@/lib/context/AppContext";
-import { GOOGLE_DRIVE_LOGO } from "@/lib/google-drive-logo";
+import { withBasePath } from "@/lib/base-path";
 import { showToast } from "@/lib/toast";
+import Image from "next/image";
 import { useState } from "react";
 
 interface App {
@@ -357,10 +358,11 @@ export default function MoreView() {
 
 function GoogleDriveIcon() {
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={GOOGLE_DRIVE_LOGO}
+    <Image
+      src={withBasePath("/logos/google-drive.png")}
       alt="Google Drive"
+      width={96}
+      height={96}
       className="w-full h-full object-contain bg-white p-0.5"
     />
   );
