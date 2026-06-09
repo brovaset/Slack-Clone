@@ -19,6 +19,12 @@ npm run dev
 
 Open [http://localhost:3001](http://localhost:3001) — sign up or log in with any email/password.
 
+## Live demo (GitHub Pages)
+
+[https://brovaset.github.io/Slack-Clone/](https://brovaset.github.io/Slack-Clone/)
+
+Pushes to `main` deploy automatically via GitHub Actions. In your repo settings, set **Pages → Build and deployment → Source** to **GitHub Actions**.
+
 ## Tech stack
 
 - Next.js 15 (App Router)
