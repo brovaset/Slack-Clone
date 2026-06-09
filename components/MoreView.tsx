@@ -1,5 +1,7 @@
 "use client";
 
+import { useApp } from "@/lib/context/AppContext";
+import { showToast } from "@/lib/toast";
 import Image from "next/image";
 import { useState } from "react";
 
@@ -78,11 +80,33 @@ export default function MoreView() {
     new Set(APPS.filter((a) => a.installed).map((a) => a.id))
   );
   const [selectedApp, setSelectedApp] = useState<App | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const { setOpenPanel, setProfileMenuOpen, addMessage, channels, openChannel } = useApp();
 
-  function showToast(msg: string) {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2500);
+  function openApp(app: App) {
+    const channel = channels[0];
+    if (channel) {
+      openChannel(channel.id);
+      addMessage(channel.id, "user-you", "You", `Opened ${app.name}`);
+    }
+    showToast(`Opened ${app.name}`);
+  }
+
+  function handleShortcut(id: string, name: string) {
+    if (id === "status") {
+      setProfileMenuOpen(true);
+      showToast("Update your status in the profile menu");
+      return;
+    }
+    if (id === "reminders") {
+      setOpenPanel("quick-add");
+      showToast("Set a reminder from the create menu");
+      return;
+    }
+    if (id === "poll") {
+      showToast("Poll created — share it in a channel");
+      return;
+    }
+    showToast(`Opened ${name}`);
   }
 
   const filtered = APPS.filter((app) => {
@@ -115,16 +139,13 @@ export default function MoreView() {
 
   return (
     <div className="flex-1 flex flex-col bg-white h-screen min-w-0 relative">
-      {toast && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-[#1D1C1D] text-white px-4 py-2.5 rounded-lg shadow-lg text-[14px] font-medium animate-in fade-in">
-          {toast}
-        </div>
-      )}
-
       <header className="px-6 h-[49px] border-b border-[#E8E8E8] flex items-center justify-between shrink-0">
         <h2 className="font-bold text-[#1D1C1D] text-[18px]">Apps</h2>
         <button
-          onClick={() => showToast("Browse the Slack App Directory")}
+          onClick={() => {
+            setTab("Recommended");
+            showToast("Showing recommended apps");
+          }}
           className="text-[13px] text-[#1264A3] font-medium hover:underline"
         >
           Browse App Directory
@@ -168,7 +189,7 @@ export default function MoreView() {
               {SHORTCUTS.map((s) => (
                 <button
                   key={s.id}
-                  onClick={() => showToast(`Opened ${s.name}`)}
+                  onClick={() => handleShortcut(s.id, s.name)}
                   className="flex items-start gap-3 p-3 rounded-lg border border-[#E8E8E8] hover:border-[#CFCFCF] hover:shadow-sm hover:bg-[#FAFAFA] text-left transition-all group"
                 >
                   <div className="w-9 h-9 rounded-lg bg-[#F4ECF6] flex items-center justify-center shrink-0 group-hover:bg-[#E8D4ED] transition-colors">
@@ -239,7 +260,7 @@ export default function MoreView() {
                         {isInstalled ? (
                           <>
                             <button
-                              onClick={() => showToast(`Opening ${app.name}...`)}
+                              onClick={() => openApp(app)}
                               className="px-3 py-1.5 text-[13px] font-bold text-[#1264A3] border border-[#1264A3] rounded hover:bg-[#E8F5FA] transition-colors"
                             >
                               Open
@@ -300,7 +321,7 @@ export default function MoreView() {
                 {installed.has(selectedApp.id) ? (
                   <button
                     onClick={() => {
-                      showToast(`Opening ${selectedApp.name}...`);
+                      openApp(selectedApp);
                       setSelectedApp(null);
                     }}
                     className="px-5 py-2.5 bg-[#007A5A] text-white font-bold rounded hover:bg-[#148567]"

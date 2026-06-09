@@ -1,20 +1,16 @@
 "use client";
 
-import { clearUser } from "@/lib/auth";
 import { useApp } from "@/lib/context/AppContext";
 import { getAvatarColor } from "@/lib/utils";
 import type { Channel } from "@/lib/types";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type RefObject } from "react";
 import CreateChannelModal from "./CreateChannelModal";
 
 interface SidebarProps {
-  displayName: string;
-  userId: string;
+  workspaceRef: RefObject<HTMLButtonElement | null>;
 }
 
-export default function Sidebar({ displayName }: SidebarProps) {
-  const router = useRouter();
+export default function Sidebar({ workspaceRef }: SidebarProps) {
   const {
     channels,
     dms,
@@ -24,7 +20,9 @@ export default function Sidebar({ displayName }: SidebarProps) {
     openChannel,
     openDm,
     setOpenPanel,
-    userStatus,
+    setProfileMenuOpen,
+    workspaceMenuOpen,
+    setWorkspaceMenuOpen,
   } = useApp();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [channelsOpen, setChannelsOpen] = useState(true);
@@ -38,28 +36,49 @@ export default function Sidebar({ displayName }: SidebarProps) {
     return () => document.removeEventListener("slack:open-create-channel", onCreateChannel);
   }, []);
 
-  function handleLogout() {
-    clearUser();
-    router.push("/login");
-  }
-
   function handleChannelCreated(channel: Channel) {
     openChannel(channel.id);
   }
 
-  const statusLabel =
-    userStatus === "dnd" ? "Do not disturb" : userStatus.charAt(0).toUpperCase() + userStatus.slice(1);
-
   return (
     <>
-      <aside className="w-[260px] min-w-[260px] bg-[#3F0E40] text-[#D1D2D3] flex flex-col h-screen">
-        <div className="px-3 pt-3 pb-2">
+      <aside className="w-[260px] min-w-[260px] bg-[#3F0E40] text-[#D1D2D3] flex flex-col h-screen relative">
+        <div className="px-2 pt-2.5 pb-2 flex items-center gap-1">
           <button
-            onClick={() => setOpenPanel("workspace")}
-            className="w-full flex items-center justify-between font-bold text-white text-[18px] hover:bg-[#350D36] px-2 py-1.5 rounded-md transition-colors shadow-sm"
+            ref={workspaceRef}
+            onClick={() => {
+              setProfileMenuOpen(false);
+              setWorkspaceMenuOpen(!workspaceMenuOpen);
+              setOpenPanel(null);
+            }}
+            className={`flex-1 min-w-0 flex items-center gap-1 font-bold text-white text-[15px] px-1.5 py-1 rounded-md transition-colors ${
+              workspaceMenuOpen ? "bg-[#350D36]" : "hover:bg-[#350D36]"
+            }`}
           >
-            <span className="truncate">Acme Corp</span>
-            <ChevronDown />
+            <span className="truncate">Slack Clone</span>
+            <ChevronDown className={workspaceMenuOpen ? "rotate-180" : ""} />
+          </button>
+          <button
+            type="button"
+            title="Workspace settings"
+            onClick={() => {
+              setWorkspaceMenuOpen(false);
+              setOpenPanel("workspace-settings");
+            }}
+            className="w-7 h-7 flex items-center justify-center rounded-md text-[#D1D2D3] hover:bg-[#350D36] hover:text-white transition-colors shrink-0"
+          >
+            <SettingsIcon />
+          </button>
+          <button
+            type="button"
+            title="New message"
+            onClick={() => {
+              setWorkspaceMenuOpen(false);
+              setOpenPanel("quick-add");
+            }}
+            className="w-7 h-7 flex items-center justify-center rounded-md text-[#D1D2D3] hover:bg-[#350D36] hover:text-white transition-colors shrink-0"
+          >
+            <ComposeIcon />
           </button>
         </div>
 
@@ -119,7 +138,7 @@ export default function Sidebar({ displayName }: SidebarProps) {
                   title="Direct messages"
                   isOpen={dmsOpen}
                   onToggle={() => setDmsOpen(!dmsOpen)}
-                  onAdd={() => dms[0] && openDm(dms[0].id)}
+                  onAdd={() => setOpenPanel("new-dm")}
                 >
                   {dms.map((dm) => (
                     <button
@@ -167,42 +186,6 @@ export default function Sidebar({ displayName }: SidebarProps) {
               Apps shown in main panel →
             </p>
           )}
-        </div>
-
-        <div className="px-3 py-2.5 border-t border-[#522653] flex items-center gap-2 hover:bg-[#350D36] transition-colors group">
-          <button
-            onClick={() => setOpenPanel("profile")}
-            className="flex items-center gap-2 flex-1 min-w-0 text-left"
-          >
-            <div className="relative shrink-0">
-              <div
-                className="w-7 h-7 rounded flex items-center justify-center text-xs font-bold text-white"
-                style={{ backgroundColor: getAvatarColor(displayName) }}
-              >
-                {displayName.charAt(0).toUpperCase()}
-              </div>
-              <span
-                className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#3F0E40] ${
-                  userStatus === "active"
-                    ? "bg-[#2BAC76]"
-                    : userStatus === "dnd"
-                      ? "bg-[#E01E5A]"
-                      : "bg-transparent border-[#ABABAD]"
-                }`}
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[15px] font-bold text-white truncate leading-tight">{displayName}</p>
-              <p className="text-[13px] text-[#D1D2D3] leading-tight">{statusLabel}</p>
-            </div>
-          </button>
-          <button
-            onClick={handleLogout}
-            className="text-[#D1D2D3] hover:text-white shrink-0 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-            title="Sign out"
-          >
-            <LogoutIcon />
-          </button>
         </div>
       </aside>
 
@@ -255,8 +238,14 @@ function SidebarSection({
   );
 }
 
-function ChevronDown() {
-  return <svg className="w-4 h-4 shrink-0 opacity-80" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>;
+function ChevronDown({ className = "" }: { className?: string }) {
+  return <svg className={`w-4 h-4 shrink-0 opacity-80 transition-transform ${className}`} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>;
+}
+function SettingsIcon() {
+  return <svg className="w-[18px] h-[18px]" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" /></svg>;
+}
+function ComposeIcon() {
+  return <svg className="w-[18px] h-[18px]" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg>;
 }
 function ChevronRight({ className = "" }: { className?: string }) {
   return <svg className={`w-3 h-3 ${className}`} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>;
@@ -269,7 +258,4 @@ function HeadphonesIcon() {
 }
 function SendIcon() {
   return <svg className="w-4 h-4 opacity-80" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>;
-}
-function LogoutIcon() {
-  return <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" /></svg>;
 }

@@ -30,9 +30,9 @@ export const MOCK_CHANNELS: Channel[] = [
 ];
 
 export const MOCK_DMS: DirectMessage[] = [
-  { id: "dm-sarah", name: "Sarah Chen", status: "active", user_id: "user-sarah" },
-  { id: "dm-marcus", name: "Marcus Webb", status: "away", user_id: "user-marcus" },
-  { id: "dm-priya", name: "Priya Patel", status: "active", user_id: "user-priya" },
+  { id: "dm-pursuit", name: "Pursuit", status: "active", user_id: "user-pursuit" },
+  { id: "dm-adedoyin", name: "Adedoyin Ahoton", status: "active", user_id: "user-adedoyin" },
+  { id: "dm-jay", name: "Jay Gibbs", status: "away", user_id: "user-jay" },
 ];
 
 export const MOCK_MEMBERS: Member[] = [
@@ -97,15 +97,15 @@ export const MOCK_MESSAGES: Message[] = [
 export const MOCK_DM_MESSAGES: DmMessage[] = [
   {
     id: "dm-msg-1",
-    dm_id: "dm-sarah",
-    user_id: "user-sarah",
+    dm_id: "dm-pursuit",
+    user_id: "user-pursuit",
     content: "Hey! Can you review the PR when you get a chance?",
     created_at: "2026-06-08T13:00:00Z",
-    profiles: { id: "user-sarah", display_name: "Sarah Chen", created_at: "" },
+    profiles: { id: "user-pursuit", display_name: "Pursuit", created_at: "" },
   },
   {
     id: "dm-msg-2",
-    dm_id: "dm-sarah",
+    dm_id: "dm-pursuit",
     user_id: "user-you",
     content: "Sure, I'll take a look this afternoon.",
     created_at: "2026-06-08T13:05:00Z",
@@ -113,11 +113,11 @@ export const MOCK_DM_MESSAGES: DmMessage[] = [
   },
   {
     id: "dm-msg-3",
-    dm_id: "dm-marcus",
-    user_id: "user-marcus",
+    dm_id: "dm-jay",
+    user_id: "user-jay",
     content: "Pushed the auth fix to staging.",
     created_at: "2026-06-08T11:00:00Z",
-    profiles: { id: "user-marcus", display_name: "Marcus Webb", created_at: "" },
+    profiles: { id: "user-jay", display_name: "Jay Gibbs", created_at: "" },
   },
 ];
 

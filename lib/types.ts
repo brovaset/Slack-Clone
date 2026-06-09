@@ -67,12 +67,16 @@ export type PanelType =
   | "search"
   | "channel-info"
   | "workspace"
+  | "workspace-settings"
   | "quick-add"
+  | "new-dm"
   | "emoji"
   | "threads"
   | "huddles"
   | "drafts"
   | "profile"
+  | "preferences"
+  | "downloads"
   | null;
 
 export type UserStatus = "active" | "away" | "dnd";

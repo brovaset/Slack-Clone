@@ -4,6 +4,7 @@ import { useApp } from "@/lib/context/AppContext";
 import type { DmMessage } from "@/lib/types";
 import { formatDateDivider, getAvatarColor } from "@/lib/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
+import HuddleBanner from "./HuddleBanner";
 import MessageComposer from "./MessageComposer";
 import MessageItem from "./MessageItem";
 
@@ -13,7 +14,7 @@ interface DmFeedProps {
 }
 
 export default function DmFeed({ displayName, userId }: DmFeedProps) {
-  const { activeDmId, getDm, getDmMessages, addDmMessage, setOpenPanel } = useApp();
+  const { activeDmId, getDm, getDmMessages, addDmMessage, setOpenPanel, startHuddle } = useApp();
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -70,6 +71,7 @@ export default function DmFeed({ displayName, userId }: DmFeedProps) {
 
   return (
     <div className="flex-1 flex flex-col bg-white h-screen min-w-0">
+      <HuddleBanner />
       <header className="px-4 h-[49px] border-b border-[#E8E8E8] shrink-0 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div
@@ -82,7 +84,7 @@ export default function DmFeed({ displayName, userId }: DmFeedProps) {
         </div>
         <div className="flex items-center gap-1">
           <button
-            onClick={() => setOpenPanel("huddles")}
+            onClick={() => dm && startHuddle(dm.name)}
             className="flex items-center px-2 py-1 rounded text-[#616061] hover:bg-[#F8F8F8]"
             title="Start huddle"
           >

@@ -1,8 +1,11 @@
 "use client";
 
+import { WORKSPACE_NAME, WORKSPACE_URL } from "@/components/WorkspaceMenu";
+import { getUser } from "@/lib/auth";
 import { useApp } from "@/lib/context/AppContext";
+import { showToast } from "@/lib/toast";
 import { getAvatarColor } from "@/lib/utils";
-import type { UserStatus } from "@/lib/types";
+import { useState } from "react";
 
 export default function SidePanel() {
   const {
@@ -15,15 +18,24 @@ export default function SidePanel() {
     deleteDraft,
     openChannel,
     openDm,
+    openDmWithMember,
     searchQuery,
     setSearchQuery,
     messages,
     getChannel,
     activeChannelId,
-    activity,
-    setUserStatus,
+    activeDmId,
+    startHuddle,
+    notificationsPaused,
+    setNotificationsPaused,
+    customStatus,
+    setCustomStatus,
     userStatus,
+    setUserStatus,
   } = useApp();
+  const user = getUser();
+  const [addingWorkspace, setAddingWorkspace] = useState(false);
+  const [newWorkspaceName, setNewWorkspaceName] = useState("");
 
   if (!openPanel) return null;
 
@@ -62,7 +74,13 @@ export default function SidePanel() {
             <ul className="py-2">
               {members.map((m) => (
                 <li key={m.id}>
-                  <button className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#F8F8F8] text-left">
+                  <button
+                    onClick={() => {
+                      openDmWithMember(m);
+                      close();
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#F8F8F8] text-left"
+                  >
                     <span className="relative shrink-0">
                       <span
                         className="w-8 h-8 rounded flex items-center justify-center text-white text-sm font-bold"
@@ -118,35 +136,31 @@ export default function SidePanel() {
             </div>
           )}
 
-          {openPanel === "channel-info" && channel && (
+          {openPanel === "channel-info" && (
             <div className="p-4 space-y-4">
-              <div>
-                <h3 className="text-[22px] font-bold text-[#1D1C1D] mb-1">#{channel.name}</h3>
-                <p className="text-[15px] text-[#616061]">{channel.description}</p>
-              </div>
-              <div>
-                <p className="text-[13px] font-bold text-[#616061] uppercase mb-2">Created</p>
-                <p className="text-[15px]">{new Date(channel.created_at).toLocaleDateString()}</p>
-              </div>
-              <div>
-                <p className="text-[13px] font-bold text-[#616061] uppercase mb-2">Members</p>
-                <p className="text-[15px]">{members.length} members</p>
-              </div>
-            </div>
-          )}
-
-          {openPanel === "workspace" && (
-            <div className="py-2">
-              <button className="w-full px-4 py-2 text-left hover:bg-[#F8F8F8] font-bold text-[#1D1C1D]">
-                Acme Corp
-              </button>
-              <button className="w-full px-4 py-2 text-left hover:bg-[#F8F8F8] text-[#616061]">
-                + Add a workspace
-              </button>
-              <hr className="my-2 border-[#E8E8E8]" />
-              <button className="w-full px-4 py-2 text-left hover:bg-[#F8F8F8] text-[#616061]">
-                Preferences
-              </button>
+              {channel ? (
+                <>
+                  <div>
+                    <h3 className="text-[22px] font-bold text-[#1D1C1D] mb-1">#{channel.name}</h3>
+                    <p className="text-[15px] text-[#616061]">{channel.description}</p>
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-bold text-[#616061] uppercase mb-2">Created</p>
+                    <p className="text-[15px]">{new Date(channel.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-bold text-[#616061] uppercase mb-2">Members</p>
+                    <button
+                      onClick={() => setOpenPanel("members")}
+                      className="text-[15px] text-[#1264A3] hover:underline"
+                    >
+                      {members.length} members
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <p className="text-[15px] text-[#616061]">Select a channel to view details.</p>
+              )}
             </div>
           )}
 
@@ -162,10 +176,7 @@ export default function SidePanel() {
                 Create a new channel
               </button>
               <button
-                onClick={() => {
-                  openDm(dms[0]?.id ?? "");
-                  close();
-                }}
+                onClick={() => setOpenPanel("new-dm")}
                 className="w-full px-4 py-2.5 text-left hover:bg-[#F8F8F8] text-[15px]"
               >
                 New direct message
@@ -208,10 +219,20 @@ export default function SidePanel() {
                 Start an audio or video huddle with your team.
               </p>
               <button
-                onClick={close}
+                onClick={() => {
+                  const dm = activeDmId ? dms.find((d) => d.id === activeDmId) : null;
+                  const label = dm
+                    ? dm.name
+                    : channel
+                      ? `#${channel.name}`
+                      : "#general";
+                  startHuddle(label);
+                }}
                 className="w-full py-2.5 bg-[#007A5A] text-white font-bold rounded hover:bg-[#148567]"
               >
-                Start Huddle in #{channel?.name ?? "general"}
+                Start Huddle in {activeDmId
+                  ? dms.find((d) => d.id === activeDmId)?.name ?? "DM"
+                  : `#${channel?.name ?? "general"}`}
               </button>
             </div>
           )}
@@ -257,26 +278,193 @@ export default function SidePanel() {
             </div>
           )}
 
+          {openPanel === "new-dm" && (
+            <ul className="py-2">
+              {members
+                .filter((m) => m.name !== "You")
+                .map((m) => (
+                  <li key={m.id}>
+                    <button
+                      onClick={() => {
+                        openDmWithMember(m);
+                        close();
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#F8F8F8] text-left"
+                    >
+                      <span
+                        className="w-8 h-8 rounded flex items-center justify-center text-white text-sm font-bold shrink-0"
+                        style={{ backgroundColor: getAvatarColor(m.name) }}
+                      >
+                        {m.name.charAt(0)}
+                      </span>
+                      <div>
+                        <p className="text-[15px] font-bold text-[#1D1C1D]">{m.name}</p>
+                        <p className="text-[13px] text-[#616061]">{m.title}</p>
+                      </div>
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          )}
+
           {openPanel === "profile" && (
-            <div className="p-4 space-y-3">
-              <p className="text-[13px] font-bold text-[#616061] uppercase">Set a status</p>
-              {(["active", "away", "dnd"] as UserStatus[]).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => {
-                    setUserStatus(s);
-                    close();
-                  }}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded hover:bg-[#F8F8F8] ${
-                    userStatus === s ? "bg-[#E8F5FA]" : ""
-                  }`}
+            <div className="p-4 space-y-4">
+              <div className="flex items-center gap-3">
+                <span
+                  className="w-12 h-12 rounded flex items-center justify-center text-white text-lg font-bold"
+                  style={{ backgroundColor: getAvatarColor(user?.displayName ?? "User") }}
                 >
-                  <StatusDot status={s} large />
-                  <span className="text-[15px] capitalize">{s === "dnd" ? "Do not disturb" : s}</span>
-                </button>
-              ))}
+                  {(user?.displayName ?? "U").charAt(0).toUpperCase()}
+                </span>
+                <div>
+                  <p className="text-[18px] font-bold text-[#1D1C1D]">{user?.displayName}</p>
+                  <p className="text-[13px] text-[#616061]">{user?.email}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-[13px] font-bold text-[#616061] uppercase mb-2">Status</p>
+                <input
+                  value={customStatus}
+                  onChange={(e) => setCustomStatus(e.target.value)}
+                  placeholder="Set a status"
+                  className="w-full px-3 py-2 border border-[#868686] rounded text-[15px] focus:outline-none focus:border-[#1264A3]"
+                />
+              </div>
+              <div>
+                <p className="text-[13px] font-bold text-[#616061] uppercase mb-2">Presence</p>
+                <div className="flex gap-2">
+                  {(["active", "away"] as const).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setUserStatus(s)}
+                      className={`px-3 py-1.5 rounded text-[13px] font-bold capitalize ${
+                        userStatus === s
+                          ? "bg-[#1264A3] text-white"
+                          : "bg-[#F8F8F8] text-[#616061] hover:bg-[#E8E8E8]"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
+
+          {openPanel === "preferences" && (
+            <div className="p-4 space-y-4">
+              <PreferenceRow
+                label="Pause notifications"
+                checked={notificationsPaused}
+                onChange={(v) => {
+                  setNotificationsPaused(v);
+                  showToast(v ? "Notifications paused" : "Notifications resumed");
+                }}
+              />
+              <PreferenceRow
+                label="Compact mode"
+                checked={false}
+                onChange={() => showToast("Compact mode toggled")}
+              />
+              <PreferenceRow
+                label="Show typing indicators"
+                checked={true}
+                onChange={() => showToast("Typing indicators toggled")}
+              />
+            </div>
+          )}
+
+          {openPanel === "downloads" && (
+            <div className="p-4">
+              <p className="text-[15px] text-[#616061] mb-4">
+                Files you download from Slack will appear here.
+              </p>
+              <p className="text-[13px] text-[#ABABAD]">No downloads yet</p>
+            </div>
+          )}
+
+          {openPanel === "workspace" && (
+            <div className="py-2">
+              <button
+                onClick={close}
+                className="w-full px-4 py-3 text-left hover:bg-[#F8F8F8]"
+              >
+                <p className="text-[15px] font-bold text-[#1D1C1D]">{WORKSPACE_NAME}</p>
+                <p className="text-[13px] text-[#616061]">{WORKSPACE_URL}</p>
+              </button>
+              <button
+                onClick={() => setOpenPanel("workspace-settings")}
+                className="w-full px-4 py-2.5 text-left hover:bg-[#F8F8F8] text-[15px] text-[#1D1C1D]"
+              >
+                Workspace settings
+              </button>
+              {!addingWorkspace ? (
+                <button
+                  onClick={() => setAddingWorkspace(true)}
+                  className="w-full px-4 py-2.5 text-left hover:bg-[#F8F8F8] text-[15px] text-[#616061]"
+                >
+                  + Add a workspace
+                </button>
+              ) : (
+                <div className="px-4 py-2 space-y-2">
+                  <input
+                    autoFocus
+                    value={newWorkspaceName}
+                    onChange={(e) => setNewWorkspaceName(e.target.value)}
+                    placeholder="Workspace name"
+                    className="w-full px-3 py-2 border border-[#868686] rounded text-[15px] focus:outline-none focus:border-[#1264A3]"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        if (newWorkspaceName.trim()) {
+                          showToast(`Workspace "${newWorkspaceName.trim()}" added`);
+                          setNewWorkspaceName("");
+                          setAddingWorkspace(false);
+                          close();
+                        }
+                      }}
+                      className="px-3 py-1.5 bg-[#007A5A] text-white text-[13px] font-bold rounded hover:bg-[#148567]"
+                    >
+                      Add
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAddingWorkspace(false);
+                        setNewWorkspaceName("");
+                      }}
+                      className="px-3 py-1.5 text-[#616061] text-[13px] hover:underline"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {openPanel === "workspace-settings" && (
+            <div className="p-4 space-y-4">
+              <div>
+                <p className="text-[13px] font-bold text-[#616061] uppercase mb-2">Workspace name</p>
+                <p className="text-[15px] text-[#1D1C1D]">{WORKSPACE_NAME}</p>
+              </div>
+              <div>
+                <p className="text-[13px] font-bold text-[#616061] uppercase mb-2">URL</p>
+                <p className="text-[15px] text-[#1D1C1D]">{WORKSPACE_URL}</p>
+              </div>
+              <div>
+                <p className="text-[13px] font-bold text-[#616061] uppercase mb-2">Members</p>
+                <button
+                  onClick={() => setOpenPanel("members")}
+                  className="text-[15px] text-[#1264A3] hover:underline"
+                >
+                  {members.length} members
+                </button>
+              </div>
+            </div>
+          )}
+
         </div>
       </aside>
     </>
@@ -289,13 +477,48 @@ function panelTitle(panel: string) {
     search: "Search",
     "channel-info": "Channel details",
     workspace: "Workspaces",
+    "workspace-settings": "Workspace settings",
+    "new-dm": "New message",
+    profile: "Profile",
+    preferences: "Preferences",
+    downloads: "Downloads",
     "quick-add": "Create",
     threads: "Threads",
     huddles: "Huddle",
     drafts: "Drafts & sent",
-    profile: "Update your status",
   };
   return titles[panel] ?? panel;
+}
+
+function PreferenceRow({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label className="flex items-center justify-between cursor-pointer">
+      <span className="text-[15px] text-[#1D1C1D]">{label}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`w-10 h-6 rounded-full transition-colors relative ${
+          checked ? "bg-[#007A5A]" : "bg-[#ABABAD]"
+        }`}
+      >
+        <span
+          className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+            checked ? "left-5" : "left-1"
+          }`}
+        />
+      </button>
+    </label>
+  );
 }
 
 function StatusDot({

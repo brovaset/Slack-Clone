@@ -9,11 +9,13 @@ import {
   MOCK_MEMBERS,
   MOCK_MESSAGES,
 } from "@/lib/mock-data";
+import { showToast } from "@/lib/toast";
 import type {
   Channel,
   DirectMessage,
   Draft,
   DmMessage,
+  Member,
   Message,
   PanelType,
   RailView,
@@ -39,6 +41,12 @@ interface AppContextValue {
   openPanel: PanelType;
   searchQuery: string;
   userStatus: UserStatus;
+  notificationsPaused: boolean;
+  profileMenuOpen: boolean;
+  workspaceMenuOpen: boolean;
+  customStatus: string;
+  huddleActive: boolean;
+  huddleLabel: string | null;
   isRecording: boolean;
   setRailView: (view: RailView) => void;
   setActiveChannelId: (id: string | null) => void;
@@ -46,7 +54,14 @@ interface AppContextValue {
   setOpenPanel: (panel: PanelType) => void;
   setSearchQuery: (q: string) => void;
   setUserStatus: (status: UserStatus) => void;
+  setNotificationsPaused: (v: boolean) => void;
+  setProfileMenuOpen: (open: boolean) => void;
+  setWorkspaceMenuOpen: (open: boolean) => void;
+  setCustomStatus: (status: string) => void;
   setIsRecording: (v: boolean) => void;
+  startHuddle: (label: string) => void;
+  endHuddle: () => void;
+  openDmWithMember: (member: Member) => void;
   addChannel: (name: string, description?: string) => Channel | null;
   addMessage: (channelId: string, userId: string, displayName: string, content: string) => void;
   addDmMessage: (dmId: string, userId: string, displayName: string, content: string) => void;
@@ -67,7 +82,7 @@ const AppContext = createContext<AppContextValue | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [channels, setChannels] = useState<Channel[]>(MOCK_CHANNELS);
   const [messages, setMessages] = useState<Message[]>(MOCK_MESSAGES);
-  const [dms] = useState<DirectMessage[]>(MOCK_DMS);
+  const [dms, setDms] = useState<DirectMessage[]>(MOCK_DMS);
   const [dmMessages, setDmMessages] = useState<DmMessage[]>(MOCK_DM_MESSAGES);
   const [drafts, setDrafts] = useState<Draft[]>(MOCK_DRAFTS);
   const [railView, setRailView] = useState<RailView>("home");
@@ -78,6 +93,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [openPanel, setOpenPanel] = useState<PanelType>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [userStatus, setUserStatus] = useState<UserStatus>("active");
+  const [notificationsPaused, setNotificationsPaused] = useState(true);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
+  const [customStatus, setCustomStatus] = useState("");
+  const [huddleActive, setHuddleActive] = useState(false);
+  const [huddleLabel, setHuddleLabel] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
 
   const openChannel = useCallback((channelId: string) => {
@@ -202,6 +223,41 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [dms]
   );
 
+  const openDmWithMember = useCallback(
+    (member: Member) => {
+      const existing = dms.find(
+        (d) => d.name.toLowerCase() === member.name.toLowerCase()
+      );
+      if (existing) {
+        openDm(existing.id);
+        return;
+      }
+      const created: DirectMessage = {
+        id: `dm-${Date.now()}`,
+        name: member.name,
+        status: member.status === "dnd" ? "away" : member.status,
+        user_id: member.id,
+      };
+      setDms((prev) => [...prev, created]);
+      openDm(created.id);
+      showToast(`Started a DM with ${member.name}`);
+    },
+    [dms, openDm]
+  );
+
+  const startHuddle = useCallback((label: string) => {
+    setHuddleActive(true);
+    setHuddleLabel(label);
+    setOpenPanel(null);
+    showToast(`Huddle started in ${label}`);
+  }, []);
+
+  const endHuddle = useCallback(() => {
+    setHuddleActive(false);
+    setHuddleLabel(null);
+    showToast("Huddle ended");
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
@@ -216,6 +272,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         openPanel,
         searchQuery,
         userStatus,
+        notificationsPaused,
+        profileMenuOpen,
+        workspaceMenuOpen,
+        customStatus,
+        huddleActive,
+        huddleLabel,
         isRecording,
         setRailView,
         setActiveChannelId,
@@ -223,7 +285,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setOpenPanel,
         setSearchQuery,
         setUserStatus,
+        setNotificationsPaused,
+        setProfileMenuOpen,
+        setWorkspaceMenuOpen,
+        setCustomStatus,
         setIsRecording,
+        startHuddle,
+        endHuddle,
+        openDmWithMember,
         addChannel,
         addMessage,
         addDmMessage,

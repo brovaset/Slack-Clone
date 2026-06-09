@@ -2,6 +2,7 @@
 
 import { EMOJI_LIST } from "@/lib/mock-data";
 import { useApp } from "@/lib/context/AppContext";
+import { showToast } from "@/lib/toast";
 import { useRef, useState } from "react";
 
 interface MessageComposerProps {
@@ -21,10 +22,11 @@ export default function MessageComposer({
   target,
   targetType,
 }: MessageComposerProps) {
-  const { openPanel, setOpenPanel, setIsRecording, isRecording, saveDraft } = useApp();
+  const { setIsRecording, isRecording, saveDraft, members } = useApp();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showEmoji, setShowEmoji] = useState(false);
+  const [showMentions, setShowMentions] = useState(false);
 
   function insertAtCursor(text: string) {
     const el = textareaRef.current;
@@ -51,7 +53,10 @@ export default function MessageComposer({
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) insertAtCursor(`[Attached: ${file.name}] `);
+    if (file) {
+      insertAtCursor(`[Attached: ${file.name}] `);
+      showToast(`Attached ${file.name}`);
+    }
     e.target.value = "";
   }
 
@@ -60,9 +65,29 @@ export default function MessageComposer({
     setShowEmoji(false);
   }
 
+  function handleMention(name: string) {
+    insertAtCursor(`@${name} `);
+    setShowMentions(false);
+  }
+
+  function toggleRecording() {
+    if (isRecording) {
+      setIsRecording(false);
+      const voiceText = "[Voice message: 0:12]";
+      onChange(value.trim() ? `${value} ${voiceText}` : voiceText);
+      showToast("Voice message recorded — press send to share");
+    } else {
+      setIsRecording(true);
+      setShowEmoji(false);
+      setShowMentions(false);
+    }
+  }
+
   function handleDraft() {
     if (value.trim()) saveDraft(value, target, targetType);
   }
+
+  const mentionCandidates = members.filter((m) => m.name !== "You");
 
   return (
     <div className="px-5 pb-6 pt-2 shrink-0 relative">
@@ -76,6 +101,21 @@ export default function MessageComposer({
               className="w-8 h-8 hover:bg-[#F8F8F8] rounded text-lg"
             >
               {emoji}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {showMentions && (
+        <div className="absolute bottom-full left-5 mb-2 bg-white border border-[#E8E8E8] rounded-lg shadow-lg py-1 z-20 w-56 max-h-48 overflow-y-auto">
+          {mentionCandidates.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => handleMention(m.name)}
+              className="w-full px-3 py-2 text-left text-[15px] hover:bg-[#F8F8F8]"
+            >
+              @{m.name}
             </button>
           ))}
         </div>
@@ -122,15 +162,31 @@ export default function MessageComposer({
               <ComposerBtn title="Attach" onClick={() => fileInputRef.current?.click()}>
                 <PlusIcon />
               </ComposerBtn>
-              <ComposerBtn title="Formatting" onClick={() => insertAtCursor("**bold text**")}>
+              <ComposerBtn
+                title="Formatting"
+                onClick={() => {
+                  insertAtCursor("**bold text**");
+                  showToast("Bold formatting added");
+                }}
+              >
                 <FormatIcon />
               </ComposerBtn>
-              <ComposerBtn title="Mention" onClick={() => insertAtCursor("@")}>
+              <ComposerBtn
+                title="Mention"
+                onClick={() => {
+                  setShowMentions(!showMentions);
+                  setShowEmoji(false);
+                }}
+                active={showMentions}
+              >
                 <AtIcon />
               </ComposerBtn>
               <ComposerBtn
                 title="Emoji"
-                onClick={() => setShowEmoji(!showEmoji)}
+                onClick={() => {
+                  setShowEmoji(!showEmoji);
+                  setShowMentions(false);
+                }}
                 active={showEmoji}
               >
                 <EmojiIcon />
@@ -139,14 +195,17 @@ export default function MessageComposer({
             <div className="flex items-center gap-1">
               <ComposerBtn
                 title="Record"
-                onClick={() => setIsRecording(!isRecording)}
+                onClick={toggleRecording}
                 active={isRecording}
               >
                 <MicIcon />
               </ComposerBtn>
               <ComposerBtn
                 title="Send a snippet"
-                onClick={() => insertAtCursor("```\ncode here\n```")}
+                onClick={() => {
+                  insertAtCursor("```\ncode here\n```");
+                  showToast("Code snippet added");
+                }}
               >
                 <SnippetIcon />
               </ComposerBtn>
@@ -162,8 +221,6 @@ export default function MessageComposer({
           </div>
         </div>
       </form>
-
-      {openPanel === "emoji" && null}
     </div>
   );
 }

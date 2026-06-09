@@ -84,11 +84,19 @@ export default function SignupPage() {
         </form>
         <p className="mt-5 text-center text-[13px] text-[#616061] leading-relaxed">
           By continuing, you&apos;re agreeing to our{" "}
-          <button type="button" className="text-[#1264A3] hover:underline font-bold">
+          <button
+            type="button"
+            className="text-[#1264A3] hover:underline font-bold"
+            onClick={() => window.open("https://slack.com/terms-of-service", "_blank")}
+          >
             Terms of Service
           </button>{" "}
           and{" "}
-          <button type="button" className="text-[#1264A3] hover:underline font-bold">
+          <button
+            type="button"
+            className="text-[#1264A3] hover:underline font-bold"
+            onClick={() => window.open("https://slack.com/trust/privacy/privacy-policy", "_blank")}
+          >
             Privacy Policy
           </button>
           .

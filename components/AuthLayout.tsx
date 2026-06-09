@@ -168,7 +168,13 @@ export function AuthHelpLink() {
       <button
         type="button"
         className="text-[15px] text-[#1264A3] hover:underline font-bold"
-        onClick={() => alert("Contact your workspace admin for help signing in.")}
+        onClick={() => {
+          document.dispatchEvent(
+            new CustomEvent("slack:toast", {
+              detail: "Contact your workspace admin for help signing in.",
+            })
+          );
+        }}
       >
         Can&apos;t sign in?
       </button>

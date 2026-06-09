@@ -1,9 +1,12 @@
 "use client";
 
+import ProfileMenu, { ProfileAvatar } from "@/components/ProfileMenu";
+import { WorkspaceIcon } from "@/components/WorkspaceMenu";
 import { useApp } from "@/lib/context/AppContext";
 import type { RailView } from "@/lib/types";
+import { useRef, type RefObject } from "react";
 
-const RAIL_ITEMS: { id: RailView; label: string; icon: React.FC }[] = [
+const RAIL_ITEMS: { id: RailView; label: string; icon: React.FC<{ active?: boolean }> }[] = [
   { id: "home", label: "Home", icon: HomeIcon },
   { id: "dms", label: "DMs", icon: DmIcon },
   { id: "activity", label: "Activity", icon: ActivityIcon },
@@ -11,77 +14,223 @@ const RAIL_ITEMS: { id: RailView; label: string; icon: React.FC }[] = [
   { id: "more", label: "More", icon: MoreIcon },
 ];
 
-export default function IconRail() {
-  const { railView, setRailView, setOpenPanel, dms, openDm, channels, openChannel } = useApp();
+interface IconRailProps {
+  displayName: string;
+  workspaceRef: RefObject<HTMLButtonElement | null>;
+}
+
+export default function IconRail({ displayName, workspaceRef }: IconRailProps) {
+  const profileRef = useRef<HTMLButtonElement>(null);
+  const {
+    railView,
+    setRailView,
+    setOpenPanel,
+    dms,
+    openDm,
+    channels,
+    openChannel,
+    notificationsPaused,
+    setNotificationsPaused,
+    profileMenuOpen,
+    setProfileMenuOpen,
+    workspaceMenuOpen,
+    setWorkspaceMenuOpen,
+  } = useApp();
 
   function handleNav(view: RailView) {
     setRailView(view);
     setOpenPanel(null);
+    setProfileMenuOpen(false);
+    setWorkspaceMenuOpen(false);
     if (view === "home" && channels[0]) openChannel(channels[0].id);
     if (view === "dms" && dms[0]) openDm(dms[0].id);
   }
 
+  function togglePause() {
+    setNotificationsPaused(!notificationsPaused);
+  }
+
+  function toggleProfileMenu() {
+    setProfileMenuOpen(!profileMenuOpen);
+    setOpenPanel(null);
+    setWorkspaceMenuOpen(false);
+  }
+
+  function toggleWorkspaceMenu() {
+    setProfileMenuOpen(false);
+    setOpenPanel(null);
+    setWorkspaceMenuOpen(!workspaceMenuOpen);
+  }
+
   return (
-    <nav className="w-[70px] min-w-[70px] bg-[#1A1D21] flex flex-col items-center py-3 gap-1 border-r border-[#363639]">
-      <button
-        onClick={() => setOpenPanel("workspace")}
-        className="w-9 h-9 rounded-lg bg-[#350D36] flex items-center justify-center mb-3 hover:bg-[#4A154B] transition-colors"
-        title="Workspaces"
-      >
-        <SlackMark />
-      </button>
+    <>
+      <nav className="w-[68px] min-w-[68px] bg-[#4A154B] flex flex-col items-center pt-2 pb-3 shrink-0 h-screen relative z-40">
+        <div className="flex flex-col items-center w-full">
+          <button
+            ref={workspaceRef}
+            onClick={toggleWorkspaceMenu}
+            title="Slack Clone"
+            className={`mb-2 p-1 rounded-[10px] transition-colors ${
+              workspaceMenuOpen ? "bg-[#6b2b6d]" : "hover:bg-[#5a1f5c]"
+            }`}
+          >
+            <WorkspaceIcon size="rail" variant="rail" />
+          </button>
 
-      {RAIL_ITEMS.map(({ id, label, icon: Icon }) => (
-        <button
-          key={id}
-          title={label}
-          onClick={() => handleNav(id)}
-          className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
-            railView === id
-              ? "bg-white text-[#1A1D21]"
-              : "text-[#ABABAD] hover:bg-[#35373B] hover:text-white"
-          }`}
-        >
-          <Icon />
-        </button>
-      ))}
+          {RAIL_ITEMS.map(({ id, label, icon: Icon }) => {
+            const active = railView === id;
+            return (
+              <button
+                key={id}
+                onClick={() => handleNav(id)}
+                className="flex flex-col items-center w-full py-2 px-1 group"
+              >
+                <div
+                  className={`w-9 h-9 rounded-[8px] flex items-center justify-center transition-colors ${
+                    active
+                      ? "bg-[#6b2b6d] text-white"
+                      : "text-white group-hover:bg-[#5a1f5c]"
+                  }`}
+                >
+                  <Icon active={active} />
+                </div>
+                <span
+                  className={`text-[11px] font-medium mt-1 leading-none ${
+                    active ? "text-white" : "text-white/90 group-hover:text-white"
+                  }`}
+                >
+                  {label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
-      <div className="flex-1" />
+        <div className="flex-1" />
 
-      <button
-        title="Create"
-        onClick={() => setOpenPanel("quick-add")}
-        className="w-9 h-9 rounded-lg flex items-center justify-center text-[#ABABAD] hover:bg-[#35373B] hover:text-white transition-colors"
-      >
-        <PlusIcon />
-      </button>
-    </nav>
+        <div className="flex flex-col items-center gap-3 w-full px-2">
+          <button
+            onClick={() => {
+              setProfileMenuOpen(false);
+              setOpenPanel("quick-add");
+            }}
+            title="Create"
+            className="w-9 h-9 rounded-full bg-[#5a1f5c] hover:bg-[#6b2b6d] flex items-center justify-center text-white transition-colors"
+          >
+            <PlusIcon />
+          </button>
+
+          <button
+            onClick={togglePause}
+            title={notificationsPaused ? "Resume notifications" : "Pause notifications"}
+            className={`w-7 h-7 rounded-full flex items-center justify-center text-white transition-colors ${
+              notificationsPaused ? "bg-[#6b2b6d]" : "bg-[#5a1f5c] hover:bg-[#6b2b6d]"
+            }`}
+          >
+            <MoonIcon />
+          </button>
+
+          <button
+            ref={profileRef}
+            onClick={toggleProfileMenu}
+            title={displayName}
+            className={`relative transition-all ${
+              profileMenuOpen ? "ring-2 ring-white/60 rounded-[8px]" : "hover:ring-2 hover:ring-white/40 rounded-[8px]"
+            }`}
+          >
+            <ProfileAvatar />
+            {notificationsPaused && (
+              <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#2BAC76] border-2 border-[#4A154B] flex items-center justify-center text-[9px] font-bold text-white pointer-events-none">
+                z
+              </span>
+            )}
+          </button>
+        </div>
+      </nav>
+
+      <ProfileMenu
+        displayName={displayName}
+        open={profileMenuOpen}
+        onClose={() => setProfileMenuOpen(false)}
+        anchorRef={profileRef}
+      />
+    </>
   );
 }
 
-function SlackMark() {
+function HomeIcon({ active }: { active?: boolean }) {
   return (
-    <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" />
+    <svg className="w-[20px] h-[20px]" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={active ? 0 : 1.75}>
+      {active ? (
+        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+      ) : (
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      )}
     </svg>
   );
 }
 
-function HomeIcon() {
-  return <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" /></svg>;
+function DmIcon({ active }: { active?: boolean }) {
+  return (
+    <svg className="w-[20px] h-[20px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+        fill={active ? "currentColor" : "none"}
+      />
+    </svg>
+  );
 }
-function DmIcon() {
-  return <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" /></svg>;
+
+function ActivityIcon({ active }: { active?: boolean }) {
+  return (
+    <svg className="w-[20px] h-[20px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+        fill={active ? "currentColor" : "none"}
+      />
+    </svg>
+  );
 }
-function ActivityIcon() {
-  return <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" /></svg>;
+
+function FilesIcon({ active }: { active?: boolean }) {
+  return (
+    <svg className="w-[20px] h-[20px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"
+        fill={active ? "currentColor" : "none"}
+      />
+    </svg>
+  );
 }
-function FilesIcon() {
-  return <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" /></svg>;
+
+function MoreIcon({ active }: { active?: boolean }) {
+  return (
+    <svg className="w-[20px] h-[20px]" viewBox="0 0 24 24" fill="currentColor">
+      <circle cx="5" cy="12" r="1.75" opacity={active ? 1 : 0.9} />
+      <circle cx="12" cy="12" r="1.75" opacity={active ? 1 : 0.9} />
+      <circle cx="19" cy="12" r="1.75" opacity={active ? 1 : 0.9} />
+    </svg>
+  );
 }
-function MoreIcon() {
-  return <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg>;
-}
+
 function PlusIcon() {
-  return <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>;
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+    </svg>
+  );
 }

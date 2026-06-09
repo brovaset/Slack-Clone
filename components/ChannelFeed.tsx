@@ -4,6 +4,7 @@ import { useApp } from "@/lib/context/AppContext";
 import type { Message } from "@/lib/types";
 import { formatDateDivider } from "@/lib/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
+import HuddleBanner from "./HuddleBanner";
 import MessageComposer from "./MessageComposer";
 import MessageItem from "./MessageItem";
 
@@ -42,6 +43,7 @@ export default function ChannelFeed({ displayName, userId }: ChannelFeedProps) {
     getChannelMessages,
     addMessage,
     setOpenPanel,
+    startHuddle,
     members,
     searchQuery,
   } = useApp();
@@ -86,6 +88,7 @@ export default function ChannelFeed({ displayName, userId }: ChannelFeedProps) {
 
   return (
     <div className="flex-1 flex flex-col bg-white h-screen min-w-0">
+      <HuddleBanner />
       <header className="px-4 h-[49px] border-b border-[#E8E8E8] shrink-0 flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-[#1D1C1D] font-bold text-[18px]">#</span>
@@ -104,7 +107,10 @@ export default function ChannelFeed({ displayName, userId }: ChannelFeedProps) {
           <ToolbarButton title="Search" onClick={() => setOpenPanel("search")}>
             <SearchIcon />
           </ToolbarButton>
-          <ToolbarButton title="Start huddle" onClick={() => setOpenPanel("huddles")}>
+          <ToolbarButton
+            title="Start huddle"
+            onClick={() => channel && startHuddle(`#${channel.name}`)}
+          >
             <PhoneIcon />
           </ToolbarButton>
           <ToolbarButton title="Channel details" onClick={() => setOpenPanel("channel-info")}>
