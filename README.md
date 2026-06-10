@@ -25,6 +25,10 @@ Open [http://localhost:3001](http://localhost:3001) — sign up or log in with a
 
 Pushes to `main` deploy automatically via GitHub Actions. In your repo settings, set **Pages → Build and deployment → Source** to **GitHub Actions**.
 
+## Security
+
+This is a **demo UI** — not production auth. See [SECURITY.md](./SECURITY.md) for input validation, rate limits, and what is (and is not) protected.
+
 ## Tech stack
 
 - Next.js 15 (App Router)

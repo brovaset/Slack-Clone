@@ -2,6 +2,8 @@
 
 import { EMOJI_LIST } from "@/lib/mock-data";
 import { useApp } from "@/lib/context/AppContext";
+import { LIMITS } from "@/lib/security";
+import { sanitizeFileName } from "@/lib/security/sanitize";
 import { showToast } from "@/lib/toast";
 import { useRef, useState } from "react";
 
@@ -54,8 +56,9 @@ export default function MessageComposer({
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) {
-      insertAtCursor(`[Attached: ${file.name}] `);
-      showToast(`Attached ${file.name}`);
+      const safeName = sanitizeFileName(file.name);
+      insertAtCursor(`[Attached: ${safeName}] `);
+      showToast(`Attached ${safeName}`);
     }
     e.target.value = "";
   }
@@ -121,7 +124,13 @@ export default function MessageComposer({
         </div>
       )}
 
-      <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileChange} />
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        accept="image/*,.pdf,.txt,.doc,.docx"
+        onChange={handleFileChange}
+      />
 
       <form
         onSubmit={(e) => {
@@ -155,6 +164,7 @@ export default function MessageComposer({
             onBlur={handleDraft}
             placeholder={placeholder}
             rows={1}
+            maxLength={LIMITS.message}
             className="w-full px-3 pt-3 pb-1 resize-none focus:outline-none text-[15px] text-[#1D1C1D] leading-[22px] min-h-[44px]"
           />
           <div className="flex items-center justify-between px-2 py-1.5">

@@ -1,5 +1,6 @@
 "use client";
 
+import { AppEvents } from "@/lib/security/events";
 import { useEffect, useState } from "react";
 
 export default function Toast() {
@@ -7,12 +8,13 @@ export default function Toast() {
 
   useEffect(() => {
     function onToast(e: Event) {
-      const detail = (e as CustomEvent<string>).detail;
+      const detail = (e as CustomEvent).detail;
+      if (typeof detail !== "string" || !detail.trim()) return;
       setMessage(detail);
       window.setTimeout(() => setMessage(null), 2800);
     }
-    document.addEventListener("slack:toast", onToast);
-    return () => document.removeEventListener("slack:toast", onToast);
+    document.addEventListener(AppEvents.toast, onToast);
+    return () => document.removeEventListener(AppEvents.toast, onToast);
   }, []);
 
   if (!message) return null;

@@ -1,6 +1,7 @@
 "use client";
 
 import { WORKSPACE_NAME } from "@/components/WorkspaceMenu";
+import { LIMITS } from "@/lib/security";
 import { clearUser } from "@/lib/auth";
 import { useApp } from "@/lib/context/AppContext";
 import { showToast } from "@/lib/toast";
@@ -142,6 +143,7 @@ export default function ProfileMenu({
                 if (e.key === "Escape") setEditingStatus(false);
               }}
               placeholder="What's your status?"
+              maxLength={LIMITS.status}
               className="flex-1 px-3 py-2 border border-[#1264A3] rounded-md text-[15px] focus:outline-none"
             />
             <button

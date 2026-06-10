@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { showToast } from "@/lib/toast";
 
 export function AuthHero() {
   return (
@@ -91,6 +92,14 @@ export function AuthDivider() {
   );
 }
 
+export function AuthDemoNotice() {
+  return (
+    <p className="mb-4 rounded-md border border-[#E8E8E8] bg-[#F8F8F8] px-3 py-2 text-[13px] text-[#616061] leading-relaxed">
+      Demo only: credentials are not verified and nothing is sent to a server.
+    </p>
+  );
+}
+
 export function AuthField({
   id,
   label,
@@ -100,6 +109,7 @@ export function AuthField({
   placeholder,
   required,
   minLength,
+  maxLength,
 }: {
   id: string;
   label: string;
@@ -109,6 +119,7 @@ export function AuthField({
   placeholder?: string;
   required?: boolean;
   minLength?: number;
+  maxLength?: number;
 }) {
   return (
     <div className="mb-5">
@@ -122,8 +133,10 @@ export function AuthField({
         onChange={(e) => onChange(e.target.value)}
         required={required}
         minLength={minLength}
+        maxLength={maxLength}
         placeholder={placeholder}
         className="slack-auth-input"
+        autoComplete={type === "password" ? "current-password" : type === "email" ? "email" : "name"}
       />
     </div>
   );
@@ -168,13 +181,9 @@ export function AuthHelpLink() {
       <button
         type="button"
         className="text-[15px] text-[#1264A3] hover:underline font-bold"
-        onClick={() => {
-          document.dispatchEvent(
-            new CustomEvent("slack:toast", {
-              detail: "Contact your workspace admin for help signing in.",
-            })
-          );
-        }}
+        onClick={() =>
+          showToast("Contact your workspace admin for help signing in.")
+        }
       >
         Can&apos;t sign in?
       </button>

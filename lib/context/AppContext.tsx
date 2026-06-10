@@ -10,6 +10,17 @@ import {
   MOCK_MESSAGES,
 } from "@/lib/mock-data";
 import { showToast } from "@/lib/toast";
+import {
+  RATE_LIMITS,
+  checkRateLimit,
+  formatRetryAfter,
+  sanitizeChannelDescription,
+  sanitizeChannelName,
+  sanitizeDraftContent,
+  sanitizeMessage,
+  sanitizeSearchQuery,
+  sanitizeStatus,
+} from "@/lib/security";
 import type {
   Channel,
   DirectMessage,
@@ -116,13 +127,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addChannel = useCallback((name: string, description?: string) => {
-    const normalized = name.trim().toLowerCase().replace(/\s+/g, "-");
-    if (!normalized) return null;
+    const rate = checkRateLimit(
+      "channel:create",
+      RATE_LIMITS.channel.max,
+      RATE_LIMITS.channel.windowMs
+    );
+    if (!rate.allowed) {
+      showToast(`Slow down — try again in ${formatRetryAfter(rate.retryAfterMs)}`);
+      return null;
+    }
+
+    const normalized = sanitizeChannelName(name);
+    if (!normalized) {
+      showToast("Use letters, numbers, hyphens, or underscores for channel names.");
+      return null;
+    }
 
     const created: Channel = {
       id: `ch-${Date.now()}`,
       name: normalized,
-      description: description?.trim() || null,
+      description: description ? sanitizeChannelDescription(description) : null,
       created_at: new Date().toISOString(),
     };
 
@@ -136,13 +160,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addMessage = useCallback(
     (channelId: string, userId: string, displayName: string, content: string) => {
+      const rate = checkRateLimit(
+        `message:${channelId}`,
+        RATE_LIMITS.message.max,
+        RATE_LIMITS.message.windowMs
+      );
+      if (!rate.allowed) {
+        showToast(`Message limit reached. Wait ${formatRetryAfter(rate.retryAfterMs)}.`);
+        return;
+      }
+
+      const safeContent = sanitizeMessage(content);
+      if (!safeContent) return;
+
       const message: Message = {
         id: `msg-${Date.now()}`,
         channel_id: channelId,
-        user_id: userId,
-        content,
+        user_id: userId.slice(0, 64),
+        content: safeContent,
         created_at: new Date().toISOString(),
-        profiles: { id: userId, display_name: displayName, created_at: "" },
+        profiles: {
+          id: userId.slice(0, 64),
+          display_name: displayName.slice(0, 80),
+          created_at: "",
+        },
       };
       setMessages((prev) => [...prev, message]);
     },
@@ -151,13 +192,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addDmMessage = useCallback(
     (dmId: string, userId: string, displayName: string, content: string) => {
+      const rate = checkRateLimit(
+        `dm-message:${dmId}`,
+        RATE_LIMITS.message.max,
+        RATE_LIMITS.message.windowMs
+      );
+      if (!rate.allowed) {
+        showToast(`Message limit reached. Wait ${formatRetryAfter(rate.retryAfterMs)}.`);
+        return;
+      }
+
+      const safeContent = sanitizeMessage(content);
+      if (!safeContent) return;
+
       const message: DmMessage = {
         id: `dm-msg-${Date.now()}`,
         dm_id: dmId,
-        user_id: userId,
-        content,
+        user_id: userId.slice(0, 64),
+        content: safeContent,
         created_at: new Date().toISOString(),
-        profiles: { id: userId, display_name: displayName, created_at: "" },
+        profiles: {
+          id: userId.slice(0, 64),
+          display_name: displayName.slice(0, 80),
+          created_at: "",
+        },
       };
       setDmMessages((prev) => [...prev, message]);
     },
@@ -166,7 +224,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const saveDraft = useCallback(
     (content: string, target: string, targetType: "channel" | "dm") => {
-      if (!content.trim()) return;
+      const safeContent = sanitizeDraftContent(content);
+      if (!safeContent) return;
       setDrafts((prev) => {
         const existing = prev.find(
           (d) => d.target === target && d.targetType === targetType
@@ -174,7 +233,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (existing) {
           return prev.map((d) =>
             d.id === existing.id
-              ? { ...d, content, updated_at: new Date().toISOString() }
+              ? { ...d, content: safeContent, updated_at: new Date().toISOString() }
               : d
           );
         }
@@ -183,7 +242,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             id: `draft-${Date.now()}`,
             target,
             targetType,
-            content,
+            content: safeContent,
             updated_at: new Date().toISOString(),
           },
           ...prev,
@@ -192,6 +251,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     []
   );
+
+  const setSearchQuerySafe = useCallback((q: string) => {
+    setSearchQuery(sanitizeSearchQuery(q));
+  }, []);
+
+  const setCustomStatusSafe = useCallback((status: string) => {
+    setCustomStatus(sanitizeStatus(status));
+  }, []);
 
   const deleteDraft = useCallback((id: string) => {
     setDrafts((prev) => prev.filter((d) => d.id !== id));
@@ -283,12 +350,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setActiveChannelId,
         setActiveDmId,
         setOpenPanel,
-        setSearchQuery,
+        setSearchQuery: setSearchQuerySafe,
         setUserStatus,
         setNotificationsPaused,
         setProfileMenuOpen,
         setWorkspaceMenuOpen,
-        setCustomStatus,
+        setCustomStatus: setCustomStatusSafe,
         setIsRecording,
         startHuddle,
         endHuddle,

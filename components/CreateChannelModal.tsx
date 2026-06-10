@@ -1,6 +1,7 @@
 "use client";
 
 import { useApp } from "@/lib/context/AppContext";
+import { LIMITS, sanitizeChannelName } from "@/lib/security";
 import type { Channel } from "@/lib/types";
 import { useState } from "react";
 
@@ -26,13 +27,17 @@ export default function CreateChannelModal({
     e.preventDefault();
     setError(null);
 
-    const normalized = name.trim().toLowerCase().replace(/\s+/g, "-");
+    const normalized = sanitizeChannelName(name);
+    if (!normalized) {
+      setError("Use letters, numbers, hyphens, or underscores only.");
+      return;
+    }
     if (channels.some((c) => c.name === normalized)) {
       setError("A channel with that name already exists.");
       return;
     }
 
-    const channel = addChannel(name, description);
+    const channel = addChannel(normalized, description);
     if (!channel) {
       setError("Please enter a channel name.");
       return;
@@ -68,6 +73,8 @@ export default function CreateChannelModal({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                maxLength={LIMITS.channelName}
+                pattern="[a-zA-Z0-9][a-zA-Z0-9-_]*"
                 className="flex-1 px-2 py-2 focus:outline-none text-[15px]"
                 placeholder="e.g. plan-budget"
               />
@@ -83,6 +90,7 @@ export default function CreateChannelModal({
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              maxLength={LIMITS.channelDescription}
               className="w-full px-3 py-2 border border-[#868686] rounded focus:outline-none focus:border-[#1264A3] focus:shadow-[0_0_0_1px_#1264A3] text-[15px]"
               placeholder="What's this channel about?"
             />

@@ -4,6 +4,7 @@ import { useApp } from "@/lib/context/AppContext";
 import { getAvatarColor } from "@/lib/utils";
 import type { Channel } from "@/lib/types";
 import { useEffect, useState, type RefObject } from "react";
+import { AppEvents } from "@/lib/security/events";
 import CreateChannelModal from "./CreateChannelModal";
 
 interface SidebarProps {
@@ -32,8 +33,8 @@ export default function Sidebar({ workspaceRef }: SidebarProps) {
     function onCreateChannel() {
       setShowCreateModal(true);
     }
-    document.addEventListener("slack:open-create-channel", onCreateChannel);
-    return () => document.removeEventListener("slack:open-create-channel", onCreateChannel);
+    document.addEventListener(AppEvents.openCreateChannel, onCreateChannel);
+    return () => document.removeEventListener(AppEvents.openCreateChannel, onCreateChannel);
   }, []);
 
   function handleChannelCreated(channel: Channel) {

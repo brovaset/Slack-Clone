@@ -1,6 +1,7 @@
 "use client";
 
 import { useApp } from "@/lib/context/AppContext";
+import { AppEvents, parseLoadDraftDetail } from "@/lib/security/events";
 import type { Message } from "@/lib/types";
 import { formatDateDivider } from "@/lib/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -65,11 +66,11 @@ export default function ChannelFeed({ displayName, userId }: ChannelFeedProps) {
 
   useEffect(() => {
     function onLoadDraft(e: Event) {
-      const content = (e as CustomEvent<string>).detail;
+      const content = parseLoadDraftDetail((e as CustomEvent).detail);
       if (content) setNewMessage(content);
     }
-    document.addEventListener("slack:load-draft", onLoadDraft);
-    return () => document.removeEventListener("slack:load-draft", onLoadDraft);
+    document.addEventListener(AppEvents.loadDraft, onLoadDraft);
+    return () => document.removeEventListener(AppEvents.loadDraft, onLoadDraft);
   }, []);
 
   function handleSend() {

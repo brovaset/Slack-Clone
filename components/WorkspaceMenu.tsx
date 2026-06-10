@@ -1,5 +1,6 @@
 "use client";
 
+import { sanitizeWorkspaceName } from "@/lib/security/sanitize";
 import { showToast } from "@/lib/toast";
 import { useEffect, useRef, useState, type RefObject } from "react";
 
@@ -99,8 +100,9 @@ export default function WorkspaceMenu({
             <button
               type="button"
               onClick={() => {
-                if (name.trim()) {
-                  showToast(`Workspace "${name.trim()}" added`);
+                const safeName = sanitizeWorkspaceName(name);
+                if (safeName) {
+                  showToast(`Workspace "${safeName}" added`);
                   setName("");
                   setAdding(false);
                   onClose();

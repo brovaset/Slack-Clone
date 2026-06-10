@@ -3,6 +3,9 @@
 import { WORKSPACE_NAME, WORKSPACE_URL } from "@/components/WorkspaceMenu";
 import { getUser } from "@/lib/auth";
 import { useApp } from "@/lib/context/AppContext";
+import { AppEvents, dispatchLoadDraft } from "@/lib/security/events";
+import { LIMITS } from "@/lib/security";
+import { sanitizeWorkspaceName } from "@/lib/security/sanitize";
 import { showToast } from "@/lib/toast";
 import { getAvatarColor } from "@/lib/utils";
 import { useState } from "react";
@@ -107,6 +110,7 @@ export default function SidePanel() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search messages..."
+                maxLength={LIMITS.searchQuery}
                 className="w-full px-3 py-2 border border-[#868686] rounded focus:outline-none focus:border-[#1264A3] text-[15px] mb-4"
               />
               {searchQuery.trim() === "" ? (
@@ -169,7 +173,7 @@ export default function SidePanel() {
               <button
                 onClick={() => {
                   close();
-                  document.dispatchEvent(new CustomEvent("slack:open-create-channel"));
+                  document.dispatchEvent(new CustomEvent(AppEvents.openCreateChannel));
                 }}
                 className="w-full px-4 py-2.5 text-left hover:bg-[#F8F8F8] text-[15px]"
               >
@@ -255,9 +259,7 @@ export default function SidePanel() {
                             if (dm) openDm(dm.id);
                           }
                           close();
-                          document.dispatchEvent(
-                            new CustomEvent("slack:load-draft", { detail: d.content })
-                          );
+                          dispatchLoadDraft(d.content);
                         }}
                         className="text-[13px] font-bold text-[#1264A3] hover:underline"
                       >
@@ -417,8 +419,9 @@ export default function SidePanel() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => {
-                        if (newWorkspaceName.trim()) {
-                          showToast(`Workspace "${newWorkspaceName.trim()}" added`);
+                        const safeName = sanitizeWorkspaceName(newWorkspaceName);
+                        if (safeName) {
+                          showToast(`Workspace "${safeName}" added`);
                           setNewWorkspaceName("");
                           setAddingWorkspace(false);
                           close();
