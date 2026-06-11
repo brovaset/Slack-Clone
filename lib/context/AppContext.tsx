@@ -73,7 +73,6 @@ interface AppContextValue {
   customStatus: string;
   huddleActive: boolean;
   huddleLabel: string | null;
-  isRecording: boolean;
   setRailView: (view: RailView) => void;
   setActiveChannelId: (id: string | null) => void;
   setActiveDmId: (id: string | null) => void;
@@ -84,7 +83,6 @@ interface AppContextValue {
   setProfileMenuOpen: (open: boolean) => void;
   setWorkspaceMenuOpen: (open: boolean) => void;
   setCustomStatus: (status: string) => void;
-  setIsRecording: (v: boolean) => void;
   startHuddle: (label: string) => void;
   endHuddle: () => void;
   openDmWithMember: (member: Member) => Promise<void>;
@@ -128,7 +126,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [customStatus, setCustomStatusState] = useState("");
   const [huddleActive, setHuddleActive] = useState(false);
   const [huddleLabel, setHuddleLabel] = useState<string | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
 
   const loadChannelMembers = useCallback(async (channelId: string) => {
     try {
@@ -589,7 +586,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         customStatus,
         huddleActive,
         huddleLabel,
-        isRecording,
         setRailView,
         setActiveChannelId,
         setActiveDmId,
@@ -600,7 +596,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setProfileMenuOpen,
         setWorkspaceMenuOpen,
         setCustomStatus,
-        setIsRecording,
         startHuddle,
         endHuddle,
         openDmWithMember,

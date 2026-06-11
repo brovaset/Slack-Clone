@@ -1,22 +1,23 @@
 # Security
 
-This project is a **client-only UI demo**. It does not provide production-grade authentication, encryption, or server-side validation.
+This project uses **Supabase Auth** and **Row Level Security (RLS)** for multi-user messaging. It is suitable for learning and small teams, not hardened production Slack replacement without additional review.
 
 ## What is protected
 
-- **Input sanitization** — messages, channel names, status text, emails, and file names are validated and length-limited before use.
-- **Rate limiting** — message sends, channel creation, and auth attempts are throttled in the browser.
-- **No secret transmission** — passwords are never stored or sent to any server. Only a minimal demo profile is kept in `sessionStorage`.
-- **Content Security Policy** — restricts scripts, images, and connections to same-origin resources.
-- **Example env file** — `.env.local.example` uses placeholders only. Real keys belong in `.env.local` (gitignored).
+- **Supabase Auth** — email/password sign up and sign in; sessions refreshed via middleware
+- **Row Level Security** — users only read channels, messages, and DMs they belong to
+- **Input sanitization** — messages, channel names, status text, and emails are validated and length-limited
+- **Client rate limiting** — message sends, channel creation, and auth attempts are throttled in the browser
+- **Content Security Policy** — restricts scripts and connections; allows Supabase API endpoints
+- **Secrets** — real keys live in `.env.local` (gitignored); `.env.local.example` uses placeholders only
 
-## What is not protected (by design)
+## What requires care
 
-- Auth is cosmetic. Anyone can edit browser storage or bypass `AuthGuard`.
-- Messages and channels live in memory only and reset on refresh.
-- Client-side rate limits can be bypassed via DevTools.
-- GitHub Pages serves a public static bundle.
+- The publishable Supabase key is exposed in the client bundle (expected for browser apps); security relies on RLS policies
+- Client-side rate limits can be bypassed via DevTools — add server-side limits for production scale
+- GitHub Pages serves a public static bundle; auth and data access are client-side against Supabase
+- Huddles, threads, and third-party apps are UI placeholders without backend support
 
 ## Reporting
 
-If you find a security issue in this demo repo, open a GitHub issue with reproduction steps.
+If you find a security issue, open a GitHub issue with reproduction steps.

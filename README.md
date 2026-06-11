@@ -1,37 +1,49 @@
-# Slack Clone (UI/UX)
+# Slack Clone
 
-A Slack-inspired UI clone built with Next.js and Tailwind CSS. No backend required — runs entirely in the browser with mock data.
+A Slack-inspired team messaging app built with Next.js, Tailwind CSS, and Supabase.
 
 ## Features
 
-- Slack-style login and signup screens (any credentials work)
-- Dark purple sidebar with channel list
-- Message feed with welcome header, timestamps, and avatars
-- Send messages (stored in local state)
-- Create new channels via modal
+- Real sign up / sign in with Supabase Auth
+- Channels with membership — add or remove teammates
+- Channel and direct messages stored in Postgres
+- Per-user views — each person sees only their channels and DMs
+- Real-time message updates
+- Profile status and presence
 
 ## Quick start
+
+1. Create a [Supabase](https://supabase.com) project
+2. Run the SQL migrations in `supabase/migrations/` via the Supabase SQL editor
+3. Enable Realtime for `messages`, `dm_messages`, and `channel_members`
+4. Copy env vars:
+
+```bash
+cp .env.local.example .env.local
+```
+
+5. Install and run:
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3001](http://localhost:3001) — sign up or log in with any email/password.
+Open [http://localhost:3001](http://localhost:3001).
 
 ## Live demo (GitHub Pages)
 
 [https://brovaset.github.io/Slack-Clone/](https://brovaset.github.io/Slack-Clone/)
 
-Pushes to `main` deploy automatically via GitHub Actions. In your repo settings, set **Pages → Build and deployment → Source** to **GitHub Actions**.
+Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` as GitHub repository secrets for deploys to work.
 
 ## Security
 
-This is a **demo UI** — not production auth. See [SECURITY.md](./SECURITY.md) for input validation, rate limits, and what is (and is not) protected.
+See [SECURITY.md](./SECURITY.md) for auth, RLS, and deployment notes.
 
 ## Tech stack
 
 - Next.js 15 (App Router)
 - React + TypeScript
 - Tailwind CSS
-- Mock data + localStorage (no Supabase needed)
+- Supabase (Auth, Postgres, Realtime)

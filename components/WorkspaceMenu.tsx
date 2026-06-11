@@ -1,8 +1,6 @@
 "use client";
 
-import { sanitizeWorkspaceName } from "@/lib/security/sanitize";
-import { showToast } from "@/lib/toast";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 
 export const WORKSPACE_NAME = "Slack Clone";
 export const WORKSPACE_URL = "slack-clone.slack.com";
@@ -19,8 +17,6 @@ export default function WorkspaceMenu({
   anchorRefs,
 }: WorkspaceMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
-  const [adding, setAdding] = useState(false);
-  const [name, setName] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -55,14 +51,7 @@ export default function WorkspaceMenu({
       ref={menuRef}
       className="fixed left-[68px] top-2 z-50 w-[280px] bg-white rounded-lg shadow-[0_0_0_1px_rgba(29,28,29,0.13),0_8px_24px_rgba(0,0,0,0.15)] overflow-hidden py-1"
     >
-      <button
-        type="button"
-        onClick={() => {
-          onClose();
-          showToast(`Switched to ${WORKSPACE_NAME}`);
-        }}
-        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#1264A3]/10 transition-colors text-left"
-      >
+      <div className="w-full flex items-center gap-3 px-4 py-3 text-left">
         <WorkspaceIcon size="lg" selected />
         <div className="min-w-0">
           <p className="text-[15px] font-bold text-[#1D1C1D] leading-tight truncate">
@@ -72,59 +61,7 @@ export default function WorkspaceMenu({
             {WORKSPACE_URL}
           </p>
         </div>
-      </button>
-
-      {!adding ? (
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#1264A3]/10 transition-colors text-left"
-        >
-          <div className="w-9 h-9 rounded-[4px] border border-[#E2E2E2] bg-[#F8F8F8] flex items-center justify-center shrink-0">
-            <svg className="w-5 h-5 text-[#1D1C1D]" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <span className="text-[15px] text-[#1D1C1D]">Add a workspace</span>
-        </button>
-      ) : (
-        <div className="px-4 py-3 space-y-2">
-          <input
-            autoFocus
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Workspace name"
-            className="w-full px-3 py-2 border border-[#868686] rounded text-[15px] focus:outline-none focus:border-[#1264A3]"
-          />
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                const safeName = sanitizeWorkspaceName(name);
-                if (safeName) {
-                  showToast(`Workspace "${safeName}" added`);
-                  setName("");
-                  setAdding(false);
-                  onClose();
-                }
-              }}
-              className="px-3 py-1.5 bg-[#007A5A] text-white text-[13px] font-bold rounded"
-            >
-              Add
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setAdding(false);
-                setName("");
-              }}
-              className="px-3 py-1.5 text-[#616061] text-[13px]"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

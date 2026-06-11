@@ -5,10 +5,8 @@ import { useAuth } from "@/lib/auth";
 import { useApp } from "@/lib/context/AppContext";
 import { AppEvents, dispatchLoadDraft } from "@/lib/security/events";
 import { LIMITS } from "@/lib/security";
-import { sanitizeWorkspaceName } from "@/lib/security/sanitize";
 import { showToast } from "@/lib/toast";
 import { getAvatarColor } from "@/lib/utils";
-import { useState } from "react";
 
 export default function SidePanel() {
   const {
@@ -40,8 +38,6 @@ export default function SidePanel() {
     setUserStatus,
   } = useApp();
   const { user } = useAuth();
-  const [addingWorkspace, setAddingWorkspace] = useState(false);
-  const [newWorkspaceName, setNewWorkspaceName] = useState("");
 
   if (!openPanel) return null;
 
@@ -274,23 +270,10 @@ export default function SidePanel() {
           )}
 
           {openPanel === "threads" && (
-            <div className="p-4 space-y-3">
-              {messages.slice(0, 3).map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => {
-                    openChannel(m.channel_id);
-                    close();
-                  }}
-                  className="w-full text-left p-3 rounded border border-[#E8E8E8] hover:bg-[#F8F8F8]"
-                >
-                  <p className="text-[13px] text-[#616061] mb-1">
-                    Thread in #{getChannel(m.channel_id)?.name}
-                  </p>
-                  <p className="text-[15px] font-bold">{m.profiles?.display_name}</p>
-                  <p className="text-[15px] text-[#1D1C1D] truncate">{m.content}</p>
-                </button>
-              ))}
+            <div className="p-4">
+              <p className="text-[15px] text-[#616061] py-8 text-center">
+                No threads yet. Reply in a channel to start a thread.
+              </p>
             </div>
           )}
 
@@ -440,16 +423,6 @@ export default function SidePanel() {
                   showToast(v ? "Notifications paused" : "Notifications resumed");
                 }}
               />
-              <PreferenceRow
-                label="Compact mode"
-                checked={false}
-                onChange={() => showToast("Compact mode toggled")}
-              />
-              <PreferenceRow
-                label="Show typing indicators"
-                checked={true}
-                onChange={() => showToast("Typing indicators toggled")}
-              />
             </div>
           )}
 
@@ -477,49 +450,6 @@ export default function SidePanel() {
               >
                 Workspace settings
               </button>
-              {!addingWorkspace ? (
-                <button
-                  onClick={() => setAddingWorkspace(true)}
-                  className="w-full px-4 py-2.5 text-left hover:bg-[#F8F8F8] text-[15px] text-[#616061]"
-                >
-                  + Add a workspace
-                </button>
-              ) : (
-                <div className="px-4 py-2 space-y-2">
-                  <input
-                    autoFocus
-                    value={newWorkspaceName}
-                    onChange={(e) => setNewWorkspaceName(e.target.value)}
-                    placeholder="Workspace name"
-                    className="w-full px-3 py-2 border border-[#868686] rounded text-[15px] focus:outline-none focus:border-[#1264A3]"
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        const safeName = sanitizeWorkspaceName(newWorkspaceName);
-                        if (safeName) {
-                          showToast(`Workspace "${safeName}" added`);
-                          setNewWorkspaceName("");
-                          setAddingWorkspace(false);
-                          close();
-                        }
-                      }}
-                      className="px-3 py-1.5 bg-[#007A5A] text-white text-[13px] font-bold rounded hover:bg-[#148567]"
-                    >
-                      Add
-                    </button>
-                    <button
-                      onClick={() => {
-                        setAddingWorkspace(false);
-                        setNewWorkspaceName("");
-                      }}
-                      className="px-3 py-1.5 text-[#616061] text-[13px] hover:underline"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 

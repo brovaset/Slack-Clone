@@ -24,7 +24,7 @@ export default function MessageComposer({
   target,
   targetType,
 }: MessageComposerProps) {
-  const { setIsRecording, isRecording, saveDraft, members } = useApp();
+  const { saveDraft, members } = useApp();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showEmoji, setShowEmoji] = useState(false);
@@ -73,24 +73,11 @@ export default function MessageComposer({
     setShowMentions(false);
   }
 
-  function toggleRecording() {
-    if (isRecording) {
-      setIsRecording(false);
-      const voiceText = "[Voice message: 0:12]";
-      onChange(value.trim() ? `${value} ${voiceText}` : voiceText);
-      showToast("Voice message recorded — press send to share");
-    } else {
-      setIsRecording(true);
-      setShowEmoji(false);
-      setShowMentions(false);
-    }
-  }
-
   function handleDraft() {
     if (value.trim()) saveDraft(value, target, targetType);
   }
 
-  const mentionCandidates = members.filter((m) => m.name !== "You");
+  const mentionCandidates = members.filter((m) => !m.name.endsWith("(you)"));
 
   return (
     <div className="px-5 pb-6 pt-2 shrink-0 relative">
@@ -138,24 +125,7 @@ export default function MessageComposer({
           onSend();
         }}
       >
-        <div
-          className={`border rounded-lg overflow-hidden focus-within:border-[#1264A3] transition-colors shadow-sm ${
-            isRecording ? "border-[#E01E5A]" : "border-[#868686]"
-          }`}
-        >
-          {isRecording && (
-            <div className="px-3 py-1.5 bg-[#FEF1F2] text-[#E01E5A] text-[13px] font-medium flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#E01E5A] animate-pulse" />
-              Recording audio message...
-              <button
-                type="button"
-                onClick={() => setIsRecording(false)}
-                className="ml-auto text-[#616061] hover:text-[#1D1C1D]"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
+        <div className="border border-[#868686] rounded-lg overflow-hidden focus-within:border-[#1264A3] transition-colors shadow-sm">
           <textarea
             ref={textareaRef}
             value={value}
@@ -203,22 +173,6 @@ export default function MessageComposer({
               </ComposerBtn>
             </div>
             <div className="flex items-center gap-1">
-              <ComposerBtn
-                title="Record"
-                onClick={toggleRecording}
-                active={isRecording}
-              >
-                <MicIcon />
-              </ComposerBtn>
-              <ComposerBtn
-                title="Send a snippet"
-                onClick={() => {
-                  insertAtCursor("```\ncode here\n```");
-                  showToast("Code snippet added");
-                }}
-              >
-                <SnippetIcon />
-              </ComposerBtn>
               <button
                 type="submit"
                 disabled={!value.trim()}
@@ -273,12 +227,6 @@ function AtIcon() {
 }
 function EmojiIcon() {
   return <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 100-2 1 1 0 000 2zm7-1a1 1 0 11-2 0 1 1 0 012 0zm-.464 5.535a1 1 0 10-1.415-1.414 3 3 0 01-4.242 0 1 1 0 00-1.415 1.414 5 5 0 007.072 0z" clipRule="evenodd" /></svg>;
-}
-function MicIcon() {
-  return <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" /></svg>;
-}
-function SnippetIcon() {
-  return <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" /></svg>;
 }
 function SendArrowIcon({ active }: { active: boolean }) {
   return (
