@@ -35,6 +35,14 @@ Open [http://localhost:3001](http://localhost:3001).
 
 [https://brovaset.github.io/Slack-Clone/](https://brovaset.github.io/Slack-Clone/)
 
+### GitHub Pages setup (required)
+
+If you see the **README** instead of the app, GitHub Pages is not using the Actions deploy.
+
+1. Repo → **Settings** → **Pages**
+2. Under **Build and deployment**, set **Source** to **GitHub Actions** (not “Deploy from a branch”)
+3. Go to **Actions** → **Deploy to GitHub Pages** → **Run workflow**
+
 ### GitHub Pages + Supabase
 
 Static export bakes env vars in at **build time**. Add these **repository secrets** (GitHub → Settings → Secrets and variables → Actions):
