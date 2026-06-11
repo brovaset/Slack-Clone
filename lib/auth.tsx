@@ -77,7 +77,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(
     async (email: string, password: string) => {
-      if (!supabase) return { error: "Supabase is not configured." };
+      if (!supabase) {
+        return {
+          error:
+            "Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY to GitHub repository secrets, then redeploy.",
+        };
+      }
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) return { error: error.message };
       return {};
@@ -87,7 +92,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = useCallback(
     async (displayName: string, email: string, password: string) => {
-      if (!supabase) return { error: "Supabase is not configured." };
+      if (!supabase) {
+        return {
+          error:
+            "Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY to GitHub repository secrets, then redeploy.",
+        };
+      }
       const safeName = sanitizeDisplayName(displayName);
       if (!safeName) return { error: "Enter a valid display name." };
 

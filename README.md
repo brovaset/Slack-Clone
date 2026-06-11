@@ -35,7 +35,23 @@ Open [http://localhost:3001](http://localhost:3001).
 
 [https://brovaset.github.io/Slack-Clone/](https://brovaset.github.io/Slack-Clone/)
 
-Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` as GitHub repository secrets for deploys to work.
+### GitHub Pages + Supabase
+
+Static export bakes env vars in at **build time**. Add these **repository secrets** (GitHub → Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+|--------|--------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Settings → API → Project URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase → Settings → API → publishable/anon key |
+
+(`NEXT_PUBLIC_SUPABASE_ANON_KEY` works as an alternative name for the key secret.)
+
+In Supabase → Authentication → URL configuration, add:
+
+- **Site URL:** `https://brovaset.github.io/Slack-Clone/`
+- **Redirect URLs:** `https://brovaset.github.io/Slack-Clone/**`
+
+Then re-run the deploy workflow (or push to `main`).
 
 ## Security
 
