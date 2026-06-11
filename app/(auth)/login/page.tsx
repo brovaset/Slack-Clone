@@ -1,17 +1,14 @@
 "use client";
 
 import {
-  AuthDemoNotice,
-  AuthDivider,
   AuthField,
   AuthFooterLink,
   AuthFormWrapper,
   AuthHelpLink,
   AuthHero,
-  AuthSSOButtons,
   AuthSubmitButton,
 } from "@/components/AuthLayout";
-import { createUser, getUser, setUser } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
 import { LIMITS } from "@/lib/security";
 import { showToast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
@@ -19,50 +16,31 @@ import { useEffect, useState } from "react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { user, loading: authLoading, signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (getUser()) router.replace("/");
-  }, [router]);
+    if (!authLoading && user) router.replace("/");
+  }, [authLoading, user, router]);
 
-  function signIn() {
-    setError(null);
-    setLoading(true);
-    const displayName = email.split("@")[0] || "User";
-    const result = createUser(displayName, email);
-    if ("error" in result) {
-      setError(result.error);
-      showToast(result.error);
-      setLoading(false);
-      return;
-    }
-    setUser(result.user);
-    router.push("/");
-  }
-
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setError(null);
     if (!password.trim()) {
       setError("Enter a password to continue.");
       return;
     }
-    signIn();
-  }
-
-  function handleSSO(provider: string) {
     setLoading(true);
-    const mockEmail = provider === "google" ? "you@gmail.com" : "you@icloud.com";
-    const result = createUser("Demo User", mockEmail);
-    if ("error" in result) {
+    const result = await signIn(email, password);
+    if (result.error) {
       setError(result.error);
       showToast(result.error);
       setLoading(false);
       return;
     }
-    setUser(result.user);
     router.push("/");
   }
 
@@ -79,9 +57,6 @@ export default function LoginPage() {
           </>
         }
       >
-        <AuthDemoNotice />
-        <AuthSSOButtons onSSO={handleSSO} />
-        <AuthDivider />
         <form onSubmit={handleSubmit}>
           <AuthField
             id="email"

@@ -45,7 +45,7 @@ export default function ChannelFeed({ displayName, userId }: ChannelFeedProps) {
     addMessage,
     setOpenPanel,
     startHuddle,
-    members,
+    channelMembers,
     searchQuery,
   } = useApp();
   const [newMessage, setNewMessage] = useState("");
@@ -103,7 +103,7 @@ export default function ChannelFeed({ displayName, userId }: ChannelFeedProps) {
         <div className="flex items-center gap-1 shrink-0">
           <ToolbarButton title="Members" onClick={() => setOpenPanel("members")}>
             <UsersIcon />
-            <span className="text-[13px] font-medium ml-1">{members.length}</span>
+            <span className="text-[13px] font-medium ml-1">{channelMembers.length}</span>
           </ToolbarButton>
           <ToolbarButton title="Search" onClick={() => setOpenPanel("search")}>
             <SearchIcon />

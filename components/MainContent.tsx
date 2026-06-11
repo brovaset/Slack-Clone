@@ -12,7 +12,7 @@ interface MainContentProps {
 }
 
 export default function MainContent({ displayName, userId }: MainContentProps) {
-  const { railView, activity, messages, channels, openChannel, getChannel } = useApp();
+  const { railView, messages, openChannel, getChannel } = useApp();
 
   if (railView === "home") {
     return <ChannelFeed displayName={displayName} userId={userId} />;
@@ -29,28 +29,36 @@ export default function MainContent({ displayName, userId }: MainContentProps) {
           <h2 className="font-bold text-[#1D1C1D] text-[18px]">Activity</h2>
         </header>
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {activity.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                const ch = channels.find((c) => c.name === item.channel);
-                if (ch) openChannel(ch.id);
-              }}
-              className="w-full text-left p-4 rounded-lg border border-[#E8E8E8] hover:bg-[#F8F8F8] transition-colors"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <span
-                  className="w-6 h-6 rounded text-white text-xs font-bold flex items-center justify-center"
-                  style={{ backgroundColor: getAvatarColor(item.from) }}
+          {messages.length === 0 ? (
+            <p className="text-[15px] text-[#616061] py-8 text-center">
+              No activity yet. Messages in your channels will appear here.
+            </p>
+          ) : (
+            [...messages]
+              .sort((a, b) => b.created_at.localeCompare(a.created_at))
+              .slice(0, 20)
+              .map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => openChannel(m.channel_id)}
+                  className="w-full text-left p-4 rounded-lg border border-[#E8E8E8] hover:bg-[#F8F8F8] transition-colors"
                 >
-                  {item.from.charAt(0)}
-                </span>
-                <span className="font-bold text-[15px]">{item.from}</span>
-                <span className="text-[13px] text-[#616061]">in #{item.channel}</span>
-              </div>
-              <p className="text-[15px] text-[#1D1C1D]">{item.message}</p>
-            </button>
-          ))}
+                  <div className="flex items-center gap-2 mb-1">
+                    <span
+                      className="w-6 h-6 rounded text-white text-xs font-bold flex items-center justify-center"
+                      style={{ backgroundColor: getAvatarColor(m.profiles?.display_name ?? "?") }}
+                    >
+                      {(m.profiles?.display_name ?? "?").charAt(0)}
+                    </span>
+                    <span className="font-bold text-[15px]">{m.profiles?.display_name}</span>
+                    <span className="text-[13px] text-[#616061]">
+                      in #{getChannel(m.channel_id)?.name}
+                    </span>
+                  </div>
+                  <p className="text-[15px] text-[#1D1C1D]">{m.content}</p>
+                </button>
+              ))
+          )}
         </div>
       </div>
     );

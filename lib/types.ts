@@ -2,6 +2,15 @@ export interface Profile {
   id: string;
   display_name: string;
   created_at: string;
+  custom_status?: string;
+  user_status: "active" | "away" | "dnd";
+}
+
+export interface ChannelMember {
+  user_id: string;
+  joined_at: string;
+  profile: Profile;
+  member: Member;
 }
 
 export interface Channel {

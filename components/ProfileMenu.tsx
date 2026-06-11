@@ -2,7 +2,7 @@
 
 import { WORKSPACE_NAME } from "@/components/WorkspaceMenu";
 import { LIMITS } from "@/lib/security";
-import { clearUser } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
 import { useApp } from "@/lib/context/AppContext";
 import { showToast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
@@ -24,6 +24,7 @@ export default function ProfileMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   const statusInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const { signOut } = useAuth();
   const {
     userStatus,
     setUserStatus,
@@ -75,8 +76,8 @@ export default function ProfileMenu({
     };
   }, [open, onClose, anchorRef]);
 
-  function handleSignOut() {
-    clearUser();
+  async function handleSignOut() {
+    await signOut();
     onClose();
     router.push("/login");
   }

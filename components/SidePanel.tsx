@@ -1,7 +1,7 @@
 "use client";
 
 import { WORKSPACE_NAME, WORKSPACE_URL } from "@/components/WorkspaceMenu";
-import { getUser } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
 import { useApp } from "@/lib/context/AppContext";
 import { AppEvents, dispatchLoadDraft } from "@/lib/security/events";
 import { LIMITS } from "@/lib/security";
@@ -15,6 +15,9 @@ export default function SidePanel() {
     openPanel,
     setOpenPanel,
     members,
+    channelMembers,
+    addMemberToChannel,
+    removeMemberFromChannel,
     channels,
     dms,
     drafts,
@@ -36,7 +39,7 @@ export default function SidePanel() {
     userStatus,
     setUserStatus,
   } = useApp();
-  const user = getUser();
+  const { user } = useAuth();
   const [addingWorkspace, setAddingWorkspace] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
 
@@ -47,6 +50,10 @@ export default function SidePanel() {
   }
 
   const channel = activeChannelId ? getChannel(activeChannelId) : undefined;
+  const channelMemberIds = new Set(channelMembers.map((cm) => cm.user_id));
+  const membersNotInChannel = members.filter(
+    (m) => !channelMemberIds.has(m.id) && !m.name.endsWith("(you)")
+  );
 
   const searchResults = searchQuery.trim()
     ? messages.filter((m) =>
@@ -73,7 +80,77 @@ export default function SidePanel() {
         </header>
 
         <div className="flex-1 overflow-y-auto">
-          {openPanel === "members" && (
+          {openPanel === "members" && activeChannelId && channel ? (
+            <div className="py-2">
+              <p className="px-4 py-2 text-[13px] font-bold text-[#616061] uppercase">
+                In #{channel.name}
+              </p>
+              <ul>
+                {channelMembers.map((cm) => (
+                  <li key={cm.user_id} className="flex items-center gap-2 px-4 py-2 hover:bg-[#F8F8F8]">
+                    <button
+                      onClick={() => {
+                        if (cm.user_id !== user?.id) {
+                          openDmWithMember(cm.member);
+                          close();
+                        }
+                      }}
+                      className="flex-1 flex items-center gap-3 text-left min-w-0"
+                    >
+                      <span className="relative shrink-0">
+                        <span
+                          className="w-8 h-8 rounded flex items-center justify-center text-white text-sm font-bold"
+                          style={{ backgroundColor: getAvatarColor(cm.member.name) }}
+                        >
+                          {cm.member.name.charAt(0)}
+                        </span>
+                        <StatusDot status={cm.member.status} />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[15px] font-bold text-[#1D1C1D] truncate">{cm.member.name}</p>
+                        <p className="text-[13px] text-[#616061] truncate">{cm.member.title}</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => removeMemberFromChannel(activeChannelId, cm.user_id)}
+                      className="text-[13px] text-[#E01E5A] hover:underline shrink-0"
+                      title={cm.user_id === user?.id ? "Leave channel" : "Remove from channel"}
+                    >
+                      {cm.user_id === user?.id ? "Leave" : "Remove"}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {membersNotInChannel.length > 0 && (
+                <>
+                  <p className="px-4 py-3 text-[13px] font-bold text-[#616061] uppercase border-t border-[#E8E8E8] mt-2">
+                    Add people
+                  </p>
+                  <ul>
+                    {membersNotInChannel.map((m) => (
+                      <li key={m.id} className="flex items-center gap-2 px-4 py-2 hover:bg-[#F8F8F8]">
+                        <div className="flex-1 flex items-center gap-3 min-w-0">
+                          <span
+                            className="w-8 h-8 rounded flex items-center justify-center text-white text-sm font-bold shrink-0"
+                            style={{ backgroundColor: getAvatarColor(m.name) }}
+                          >
+                            {m.name.charAt(0)}
+                          </span>
+                          <p className="text-[15px] font-bold text-[#1D1C1D] truncate">{m.name}</p>
+                        </div>
+                        <button
+                          onClick={() => addMemberToChannel(activeChannelId, m.id)}
+                          className="text-[13px] text-[#1264A3] font-bold hover:underline shrink-0"
+                        >
+                          Add
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+          ) : openPanel === "members" ? (
             <ul className="py-2">
               {members.map((m) => (
                 <li key={m.id}>
@@ -101,7 +178,7 @@ export default function SidePanel() {
                 </li>
               ))}
             </ul>
-          )}
+          ) : null}
 
           {openPanel === "search" && (
             <div className="p-4">
@@ -158,7 +235,7 @@ export default function SidePanel() {
                       onClick={() => setOpenPanel("members")}
                       className="text-[15px] text-[#1264A3] hover:underline"
                     >
-                      {members.length} members
+                      {channelMembers.length} members
                     </button>
                   </div>
                 </>
@@ -283,7 +360,7 @@ export default function SidePanel() {
           {openPanel === "new-dm" && (
             <ul className="py-2">
               {members
-                .filter((m) => m.name !== "You")
+                .filter((m) => !m.name.endsWith("(you)"))
                 .map((m) => (
                   <li key={m.id}>
                     <button

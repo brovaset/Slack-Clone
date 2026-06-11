@@ -1,6 +1,6 @@
 "use client";
 
-import { EMOJI_LIST } from "@/lib/mock-data";
+import { EMOJI_LIST } from "@/lib/constants";
 import { useApp } from "@/lib/context/AppContext";
 import { LIMITS } from "@/lib/security";
 import { sanitizeFileName } from "@/lib/security/sanitize";

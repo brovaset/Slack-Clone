@@ -5,12 +5,12 @@ import MainContent from "@/components/MainContent";
 import SidePanel from "@/components/SidePanel";
 import Sidebar from "@/components/Sidebar";
 import WorkspaceMenu from "@/components/WorkspaceMenu";
-import { getUser } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
 import { useApp } from "@/lib/context/AppContext";
 import { useRef } from "react";
 
 export default function HomePage() {
-  const user = getUser();
+  const { user } = useAuth();
   const displayName = user?.displayName ?? "User";
   const railWorkspaceRef = useRef<HTMLButtonElement>(null);
   const sidebarWorkspaceRef = useRef<HTMLButtonElement>(null);

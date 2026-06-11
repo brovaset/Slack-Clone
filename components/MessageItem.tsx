@@ -1,3 +1,6 @@
+"use client";
+
+import { useApp } from "@/lib/context/AppContext";
 import type { DmMessage, Message } from "@/lib/types";
 import { formatMessageTime, getAvatarColor } from "@/lib/utils";
 
@@ -7,7 +10,12 @@ interface MessageItemProps {
 }
 
 export default function MessageItem({ message, isGrouped = false }: MessageItemProps) {
-  const displayName = message.profiles?.display_name ?? "Unknown";
+  const { members } = useApp();
+  const member = members.find((m) => m.id === message.user_id);
+  const displayName =
+    message.profiles?.display_name ??
+    member?.name.replace(/ \(you\)$/, "") ??
+    "Unknown";
 
   if (isGrouped) {
     return (

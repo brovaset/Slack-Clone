@@ -1,16 +1,13 @@
 "use client";
 
 import {
-  AuthDemoNotice,
-  AuthDivider,
   AuthField,
   AuthFooterLink,
   AuthFormWrapper,
   AuthHero,
-  AuthSSOButtons,
   AuthSubmitButton,
 } from "@/components/AuthLayout";
-import { createUser, getUser, setUser } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
 import { LIMITS } from "@/lib/security";
 import { showToast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
@@ -22,6 +19,7 @@ function openExternal(url: string) {
 
 export default function SignupPage() {
   const router = useRouter();
+  const { user, loading: authLoading, signUp } = useAuth();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,10 +27,10 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (getUser()) router.replace("/");
-  }, [router]);
+    if (!authLoading && user) router.replace("/");
+  }, [authLoading, user, router]);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     if (password.length < 6) {
@@ -40,28 +38,18 @@ export default function SignupPage() {
       return;
     }
     setLoading(true);
-    const result = createUser(displayName || email.split("@")[0] || "User", email);
-    if ("error" in result) {
+    const result = await signUp(
+      displayName || email.split("@")[0] || "User",
+      email,
+      password
+    );
+    if (result.error) {
       setError(result.error);
       showToast(result.error);
       setLoading(false);
       return;
     }
-    setUser(result.user);
-    router.push("/");
-  }
-
-  function handleSSO(provider: string) {
-    setLoading(true);
-    const mockEmail = provider === "google" ? "you@gmail.com" : "you@icloud.com";
-    const result = createUser("Demo User", mockEmail);
-    if ("error" in result) {
-      setError(result.error);
-      showToast(result.error);
-      setLoading(false);
-      return;
-    }
-    setUser(result.user);
+    showToast("Account created — you're signed in!");
     router.push("/");
   }
 
@@ -74,9 +62,6 @@ export default function SignupPage() {
           <AuthFooterLink text="Already using Slack?" linkText="Sign in" href="/login" />
         }
       >
-        <AuthDemoNotice />
-        <AuthSSOButtons onSSO={handleSSO} />
-        <AuthDivider />
         <form onSubmit={handleSubmit}>
           <AuthField
             id="displayName"

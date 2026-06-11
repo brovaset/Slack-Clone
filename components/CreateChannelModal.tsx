@@ -23,7 +23,7 @@ export default function CreateChannelModal({
 
   if (!isOpen) return null;
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
@@ -37,7 +37,7 @@ export default function CreateChannelModal({
       return;
     }
 
-    const channel = addChannel(normalized, description);
+    const channel = await addChannel(normalized, description);
     if (!channel) {
       setError("Please enter a channel name.");
       return;
