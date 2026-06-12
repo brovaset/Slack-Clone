@@ -1,3 +1,18 @@
+import type { DmMessage, Member, Message } from "@/lib/types";
+
+export function messageSenderName(
+  message: Message | DmMessage,
+  members: Member[]
+): string {
+  const fromProfile = message.profiles?.display_name?.trim();
+  if (fromProfile) return fromProfile;
+
+  const member = members.find((m) => m.id === message.user_id);
+  if (member) return member.name.replace(/ \(you\)$/, "");
+
+  return "Unknown";
+}
+
 export function formatMessageTime(iso: string) {
   const date = new Date(iso);
   return date.toLocaleTimeString(undefined, {

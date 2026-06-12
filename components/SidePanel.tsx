@@ -6,7 +6,7 @@ import { useApp } from "@/lib/context/AppContext";
 import { AppEvents, dispatchLoadDraft } from "@/lib/security/events";
 import { LIMITS } from "@/lib/security";
 import { showToast } from "@/lib/toast";
-import { getAvatarColor } from "@/lib/utils";
+import { getAvatarColor, messageSenderName } from "@/lib/utils";
 
 export default function SidePanel() {
   const {
@@ -202,7 +202,7 @@ export default function SidePanel() {
                         className="w-full text-left p-3 rounded hover:bg-[#F8F8F8] border border-[#E8E8E8]"
                       >
                         <p className="text-[13px] text-[#616061] mb-1">
-                          #{getChannel(m.channel_id)?.name} · {m.profiles?.display_name}
+                          #{getChannel(m.channel_id)?.name} · {messageSenderName(m, members)}
                         </p>
                         <p className="text-[15px] text-[#1D1C1D]">{m.content}</p>
                       </button>

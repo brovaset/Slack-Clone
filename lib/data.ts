@@ -75,7 +75,7 @@ export async function fetchChannelMessages(channelIds: string[]): Promise<Messag
     created_at: m.created_at,
     profiles: {
       id: m.user_id,
-      display_name: m.display_name,
+      display_name: m.display_name?.trim() || "Unknown",
       created_at: "",
       custom_status: "",
       user_status: "active",
@@ -179,7 +179,7 @@ export async function fetchDmMessages(conversationIds: string[]): Promise<DmMess
     created_at: m.created_at,
     profiles: {
       id: m.user_id,
-      display_name: m.display_name,
+      display_name: m.display_name?.trim() || "Unknown",
       created_at: "",
       custom_status: "",
       user_status: "active",
@@ -247,7 +247,6 @@ export async function sendChannelMessage(
     user_id: row.user_id,
     content: row.content,
     created_at: row.created_at,
-    profiles: { id: userId, display_name: "", created_at: "" } as Profile,
   };
 }
 
@@ -320,7 +319,6 @@ export async function sendDmMessage(
     user_id: row.user_id,
     content: row.content,
     created_at: row.created_at,
-    profiles: { id: userId, display_name: "", created_at: "" } as Profile,
   };
 }
 

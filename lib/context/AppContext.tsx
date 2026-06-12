@@ -210,16 +210,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setMessages((prev) => {
             if (prev.some((m) => m.id === raw.id)) return prev;
             const member = members.find((m) => m.id === raw.user_id);
+            const senderName = member?.name.replace(/ \(you\)$/, "").trim();
             const msg: Message = {
               ...raw,
-              profiles: raw.profiles ?? (member
-                ? {
-                    id: member.id,
-                    display_name: member.name.replace(/ \(you\)$/, ""),
-                    created_at: "",
-                    user_status: member.status,
-                  }
-                : undefined),
+              profiles:
+                raw.profiles?.display_name?.trim()
+                  ? raw.profiles
+                  : senderName
+                    ? {
+                        id: member!.id,
+                        display_name: senderName,
+                        created_at: "",
+                        user_status: member!.status,
+                      }
+                    : undefined,
             };
             return [...prev, msg];
           });
@@ -357,9 +361,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       try {
         const message = await sendChannelMessage(channelId, userId, safeContent);
+        const withSender: Message = {
+          ...message,
+          profiles: {
+            id: userId,
+            display_name: _displayName,
+            created_at: message.created_at,
+            user_status: "active",
+          },
+        };
         setMessages((prev) => {
           if (prev.some((m) => m.id === message.id)) return prev;
-          return [...prev, message];
+          return [...prev, withSender];
         });
       } catch (err) {
         showToast(getErrorMessage(err, "Failed to send message"));
@@ -369,7 +382,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const addDmMessage = useCallback(
-    async (dmId: string, userId: string, _displayName: string, content: string) => {
+    async (dmId: string, userId: string, displayName: string, content: string) => {
       const rate = checkRateLimit(
         `dm-message:${dmId}`,
         RATE_LIMITS.message.max,
@@ -385,9 +398,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       try {
         const message = await sendDmMessage(dmId, userId, safeContent);
+        const withSender: DmMessage = {
+          ...message,
+          profiles: {
+            id: userId,
+            display_name: displayName,
+            created_at: message.created_at,
+            user_status: "active",
+          },
+        };
         setDmMessages((prev) => {
           if (prev.some((m) => m.id === message.id)) return prev;
-          return [...prev, message];
+          return [...prev, withSender];
         });
       } catch (err) {
         showToast(getErrorMessage(err, "Failed to send message"));

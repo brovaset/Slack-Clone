@@ -1,7 +1,7 @@
 "use client";
 
 import { useApp } from "@/lib/context/AppContext";
-import { getAvatarColor } from "@/lib/utils";
+import { getAvatarColor, messageSenderName } from "@/lib/utils";
 import ChannelFeed from "./ChannelFeed";
 import DmFeed from "./DmFeed";
 import MoreView from "./MoreView";
@@ -12,7 +12,7 @@ interface MainContentProps {
 }
 
 export default function MainContent({ displayName, userId }: MainContentProps) {
-  const { railView, messages, openChannel, getChannel } = useApp();
+  const { railView, messages, members, openChannel, getChannel } = useApp();
 
   if (railView === "home") {
     return <ChannelFeed displayName={displayName} userId={userId} />;
@@ -37,7 +37,9 @@ export default function MainContent({ displayName, userId }: MainContentProps) {
             [...messages]
               .sort((a, b) => b.created_at.localeCompare(a.created_at))
               .slice(0, 20)
-              .map((m) => (
+              .map((m) => {
+                const sender = messageSenderName(m, members);
+                return (
                 <button
                   key={m.id}
                   onClick={() => openChannel(m.channel_id)}
@@ -46,18 +48,19 @@ export default function MainContent({ displayName, userId }: MainContentProps) {
                   <div className="flex items-center gap-2 mb-1">
                     <span
                       className="w-6 h-6 rounded text-white text-xs font-bold flex items-center justify-center"
-                      style={{ backgroundColor: getAvatarColor(m.profiles?.display_name ?? "?") }}
+                      style={{ backgroundColor: getAvatarColor(sender) }}
                     >
-                      {(m.profiles?.display_name ?? "?").charAt(0)}
+                      {sender.charAt(0)}
                     </span>
-                    <span className="font-bold text-[15px]">{m.profiles?.display_name}</span>
+                    <span className="font-bold text-[15px]">{sender}</span>
                     <span className="text-[13px] text-[#616061]">
                       in #{getChannel(m.channel_id)?.name}
                     </span>
                   </div>
                   <p className="text-[15px] text-[#1D1C1D]">{m.content}</p>
                 </button>
-              ))
+                );
+              })
           )}
         </div>
       </div>
@@ -70,7 +73,7 @@ export default function MainContent({ displayName, userId }: MainContentProps) {
       .map((m) => ({
         id: m.id,
         name: m.content.match(/\[Attached: (.+?)\]/)?.[1] ?? "file",
-        from: m.profiles?.display_name ?? "Unknown",
+        from: messageSenderName(m, members),
         channel: getChannel(m.channel_id)?.name ?? "",
       }));
 
