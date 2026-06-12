@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!supabase) {
         return {
           error:
-            "Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY to GitHub repository secrets, then redeploy.",
+            "Supabase is not configured. Check lib/supabase/public-config.ts.",
         };
       }
       const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!supabase) {
         return {
           error:
-            "Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY to GitHub repository secrets, then redeploy.",
+            "Supabase is not configured. Check lib/supabase/public-config.ts.",
         };
       }
       const safeName = sanitizeDisplayName(displayName);
