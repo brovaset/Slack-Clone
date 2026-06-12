@@ -1,6 +1,16 @@
 -- Reliable channel load/create via security definer functions (bypasses RLS edge cases).
 -- Also backfills missing profiles and default channel memberships.
 
+-- Ensure channel_members exists (from 002)
+create table if not exists public.channel_members (
+  channel_id uuid not null references public.channels(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  joined_at timestamptz not null default now(),
+  primary key (channel_id, user_id)
+);
+
+alter table public.channel_members enable row level security;
+
 -- Ensure 002 profile columns exist (load fails if these are missing)
 alter table public.profiles
   add column if not exists custom_status text not null default '',
