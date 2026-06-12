@@ -39,7 +39,7 @@ export default function CreateChannelModal({
 
     const channel = await addChannel(normalized, description);
     if (!channel) {
-      setError("Please enter a channel name.");
+      // addChannel shows a toast with the real error (RLS, duplicate name, etc.)
       return;
     }
 
@@ -71,7 +71,9 @@ export default function CreateChannelModal({
                 id="channelName"
                 type="text"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) =>
+                  setName(e.target.value.replace(/^#+/, "").replace(/^\s+/, ""))
+                }
                 required
                 maxLength={LIMITS.channelName}
                 pattern="[a-zA-Z0-9][a-zA-Z0-9-_]*"
