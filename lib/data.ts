@@ -26,10 +26,7 @@ export async function ensureUserProfile(): Promise<void> {
 
 export async function fetchProfiles(): Promise<Profile[]> {
   const supabase = requireClient();
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, display_name, custom_status, user_status, created_at")
-    .order("display_name");
+  const { data, error } = await supabase.rpc("list_workspace_profiles");
   if (error) throw error;
   return (data ?? []).map((p: {
     id: string;
@@ -116,44 +113,29 @@ export async function fetchChannelMembers(channelId: string): Promise<ChannelMem
 }
 
 export async function fetchUserDms(
-  userId: string,
-  profiles: Profile[]
+  _userId: string,
+  _profiles: Profile[]
 ): Promise<DirectMessage[]> {
   const supabase = requireClient();
-  const { data: participations, error } = await supabase
-    .from("dm_participants")
-    .select("conversation_id")
-    .eq("user_id", userId);
+  const { data, error } = await supabase.rpc("get_my_dms");
   if (error) throw error;
-  if (!participations?.length) return [];
 
-  const conversationIds = participations.map((p: { conversation_id: string }) => p.conversation_id);
-  const { data: allParticipants, error: partError } = await supabase
-    .from("dm_participants")
-    .select("conversation_id, user_id")
-    .in("conversation_id", conversationIds);
-  if (partError) throw partError;
-
-  const profileMap = new Map(profiles.map((p) => [p.id, p]));
-  const dms: DirectMessage[] = [];
-
-  for (const convId of conversationIds) {
-    const others = (allParticipants ?? [])
-      .filter((p: { conversation_id: string; user_id: string }) => p.conversation_id === convId && p.user_id !== userId)
-      .map((p: { user_id: string }) => profileMap.get(p.user_id))
-      .filter(Boolean) as Profile[];
-
-    if (others.length === 0) continue;
-    const other = others[0];
-    dms.push({
-      id: convId,
-      name: other.display_name,
-      status: other.user_status === "dnd" ? "away" : other.user_status === "away" ? "away" : "active",
-      user_id: other.id,
-    });
-  }
-
-  return dms.sort((a, b) => a.name.localeCompare(b.name));
+  return (data ?? []).map((row: {
+    conversation_id: string;
+    other_user_id: string;
+    other_display_name: string;
+    other_user_status: string;
+  }) => ({
+    id: row.conversation_id,
+    name: row.other_display_name,
+    status:
+      row.other_user_status === "dnd"
+        ? "away"
+        : row.other_user_status === "away"
+          ? "away"
+          : "active",
+    user_id: row.other_user_id,
+  }));
 }
 
 export async function fetchDmMessages(conversationIds: string[]): Promise<DmMessage[]> {
@@ -251,46 +233,16 @@ export async function sendChannelMessage(
 }
 
 export async function getOrCreateDm(
-  currentUserId: string,
+  _currentUserId: string,
   otherUserId: string
 ): Promise<string> {
   const supabase = requireClient();
-
-  const { data: myConvs, error: myError } = await supabase
-    .from("dm_participants")
-    .select("conversation_id")
-    .eq("user_id", currentUserId);
-  if (myError) throw myError;
-
-  const myConvIds = (myConvs ?? []).map((c: { conversation_id: string }) => c.conversation_id);
-  if (myConvIds.length > 0) {
-    const { data: match, error: matchError } = await supabase
-      .from("dm_participants")
-      .select("conversation_id")
-      .eq("user_id", otherUserId)
-      .in("conversation_id", myConvIds);
-    if (matchError) throw matchError;
-    if (match?.length) return match[0].conversation_id;
-  }
-
-  const { data: conversation, error: convError } = await supabase
-    .from("dm_conversations")
-    .insert({})
-    .select("id")
-    .single();
-  if (convError) throw convError;
-
-  const { error: selfPartError } = await supabase
-    .from("dm_participants")
-    .insert({ conversation_id: conversation.id, user_id: currentUserId });
-  if (selfPartError) throw selfPartError;
-
-  const { error: otherPartError } = await supabase
-    .from("dm_participants")
-    .insert({ conversation_id: conversation.id, user_id: otherUserId });
-  if (otherPartError) throw otherPartError;
-
-  return conversation.id;
+  const { data, error } = await supabase.rpc("get_or_create_dm", {
+    p_other_user_id: otherUserId,
+  });
+  if (error) throw error;
+  if (!data) throw new Error("Could not open conversation");
+  return data as string;
 }
 
 export async function sendDmMessage(

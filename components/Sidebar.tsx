@@ -225,7 +225,7 @@ function SidebarSection({
         {onAdd && (
           <button
             onClick={onAdd}
-            className="text-[#D1D2D3] hover:text-white w-5 h-5 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 transition-opacity"
+            className="text-[#D1D2D3] hover:text-white w-5 h-5 flex items-center justify-center rounded opacity-80 hover:opacity-100 transition-opacity"
             title={`Add ${title.toLowerCase()}`}
           >
             <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">

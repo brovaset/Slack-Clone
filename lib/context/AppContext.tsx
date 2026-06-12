@@ -442,7 +442,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         openDm(convId);
         showToast(`Started a DM with ${cleanName}`);
       } catch (err) {
-        showToast(err instanceof Error ? err.message : "Failed to open DM");
+        showToast(getErrorMessage(err, "Failed to open DM"));
       }
     },
     [user, dms, openDm]

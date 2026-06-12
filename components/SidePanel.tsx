@@ -7,6 +7,7 @@ import { AppEvents, dispatchLoadDraft } from "@/lib/security/events";
 import { LIMITS } from "@/lib/security";
 import { showToast } from "@/lib/toast";
 import { getAvatarColor, messageSenderName } from "@/lib/utils";
+import { useMemo, useState } from "react";
 
 export default function SidePanel() {
   const {
@@ -38,6 +39,18 @@ export default function SidePanel() {
     setUserStatus,
   } = useApp();
   const { user } = useAuth();
+  const [dmSearch, setDmSearch] = useState("");
+
+  const dmCandidates = useMemo(() => {
+    const others = members.filter((m) => !m.name.endsWith("(you)"));
+    const q = dmSearch.trim().toLowerCase();
+    if (!q) return others;
+    return others.filter(
+      (m) =>
+        m.name.toLowerCase().includes(q) ||
+        m.title.toLowerCase().includes(q)
+    );
+  }, [members, dmSearch]);
 
   if (!openPanel) return null;
 
@@ -148,9 +161,12 @@ export default function SidePanel() {
             </div>
           ) : openPanel === "members" ? (
             <ul className="py-2">
-              {members.map((m) => (
+              {members
+                .filter((m) => !m.name.endsWith("(you)"))
+                .map((m) => (
                 <li key={m.id}>
                   <button
+                    type="button"
                     onClick={() => {
                       openDmWithMember(m);
                       close();
@@ -341,32 +357,52 @@ export default function SidePanel() {
           )}
 
           {openPanel === "new-dm" && (
-            <ul className="py-2">
-              {members
-                .filter((m) => !m.name.endsWith("(you)"))
-                .map((m) => (
-                  <li key={m.id}>
-                    <button
-                      onClick={() => {
-                        openDmWithMember(m);
-                        close();
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#F8F8F8] text-left"
-                    >
-                      <span
-                        className="w-8 h-8 rounded flex items-center justify-center text-white text-sm font-bold shrink-0"
-                        style={{ backgroundColor: getAvatarColor(m.name) }}
+            <div className="py-2">
+              <div className="px-4 pb-3">
+                <input
+                  type="search"
+                  value={dmSearch}
+                  onChange={(e) => setDmSearch(e.target.value)}
+                  placeholder="Search teammates..."
+                  className="w-full px-3 py-2 border border-[#868686] rounded text-[15px] focus:outline-none focus:border-[#1264A3] focus:shadow-[0_0_0_1px_#1264A3]"
+                  autoFocus
+                />
+              </div>
+              {dmCandidates.length === 0 ? (
+                <p className="px-4 py-6 text-[15px] text-[#616061] text-center leading-relaxed">
+                  {members.length <= 1
+                    ? "No other teammates yet. Ask classmates to sign up at this app, then they will appear here."
+                    : "No teammates match your search."}
+                </p>
+              ) : (
+                <ul>
+                  {dmCandidates.map((m) => (
+                    <li key={m.id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          openDmWithMember(m);
+                          setDmSearch("");
+                          close();
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#F8F8F8] text-left"
                       >
-                        {m.name.charAt(0)}
-                      </span>
-                      <div>
-                        <p className="text-[15px] font-bold text-[#1D1C1D]">{m.name}</p>
-                        <p className="text-[13px] text-[#616061]">{m.title}</p>
-                      </div>
-                    </button>
-                  </li>
-                ))}
-            </ul>
+                        <span
+                          className="w-8 h-8 rounded flex items-center justify-center text-white text-sm font-bold shrink-0"
+                          style={{ backgroundColor: getAvatarColor(m.name) }}
+                        >
+                          {m.name.charAt(0)}
+                        </span>
+                        <div>
+                          <p className="text-[15px] font-bold text-[#1D1C1D]">{m.name}</p>
+                          <p className="text-[13px] text-[#616061]">{m.title}</p>
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
 
           {openPanel === "profile" && (
