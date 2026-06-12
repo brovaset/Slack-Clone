@@ -362,7 +362,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           return [...prev, message];
         });
       } catch (err) {
-        showToast(err instanceof Error ? err.message : "Failed to send message");
+        showToast(getErrorMessage(err, "Failed to send message"));
       }
     },
     []
@@ -390,7 +390,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           return [...prev, message];
         });
       } catch (err) {
-        showToast(err instanceof Error ? err.message : "Failed to send message");
+        showToast(getErrorMessage(err, "Failed to send message"));
       }
     },
     []

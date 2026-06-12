@@ -56,11 +56,9 @@ export async function fetchUserChannels(_userId: string): Promise<Channel[]> {
 export async function fetchChannelMessages(channelIds: string[]): Promise<Message[]> {
   if (channelIds.length === 0) return [];
   const supabase = requireClient();
-  const { data, error } = await supabase
-    .from("messages")
-    .select("id, channel_id, user_id, content, created_at, profiles(id, display_name, created_at)")
-    .in("channel_id", channelIds)
-    .order("created_at", { ascending: true });
+  const { data, error } = await supabase.rpc("get_channel_messages", {
+    p_channel_ids: channelIds,
+  });
   if (error) throw error;
   return (data ?? []).map((m: {
     id: string;
@@ -68,14 +66,20 @@ export async function fetchChannelMessages(channelIds: string[]): Promise<Messag
     user_id: string;
     content: string;
     created_at: string;
-    profiles: unknown;
+    display_name: string;
   }) => ({
     id: m.id,
     channel_id: m.channel_id,
     user_id: m.user_id,
     content: m.content,
     created_at: m.created_at,
-    profiles: (Array.isArray(m.profiles) ? m.profiles[0] : m.profiles) as Profile | undefined,
+    profiles: {
+      id: m.user_id,
+      display_name: m.display_name,
+      created_at: "",
+      custom_status: "",
+      user_status: "active",
+    } as Profile,
   }));
 }
 
@@ -155,11 +159,9 @@ export async function fetchUserDms(
 export async function fetchDmMessages(conversationIds: string[]): Promise<DmMessage[]> {
   if (conversationIds.length === 0) return [];
   const supabase = requireClient();
-  const { data, error } = await supabase
-    .from("dm_messages")
-    .select("id, conversation_id, user_id, content, created_at, profiles(id, display_name, created_at)")
-    .in("conversation_id", conversationIds)
-    .order("created_at", { ascending: true });
+  const { data, error } = await supabase.rpc("get_dm_messages", {
+    p_conversation_ids: conversationIds,
+  });
   if (error) throw error;
 
   return (data ?? []).map((m: {
@@ -168,14 +170,20 @@ export async function fetchDmMessages(conversationIds: string[]): Promise<DmMess
     user_id: string;
     content: string;
     created_at: string;
-    profiles: unknown;
+    display_name: string;
   }) => ({
     id: m.id,
     dm_id: m.conversation_id,
     user_id: m.user_id,
     content: m.content,
     created_at: m.created_at,
-    profiles: m.profiles as Profile | undefined,
+    profiles: {
+      id: m.user_id,
+      display_name: m.display_name,
+      created_at: "",
+      custom_status: "",
+      user_status: "active",
+    } as Profile,
   }));
 }
 
@@ -219,19 +227,19 @@ export async function sendChannelMessage(
   content: string
 ): Promise<Message> {
   const supabase = requireClient();
-  const { data, error } = await supabase
-    .from("messages")
-    .insert({ channel_id: channelId, user_id: userId, content })
-    .select("id, channel_id, user_id, content, created_at, profiles(id, display_name, created_at)")
-    .single();
+  const { data, error } = await supabase.rpc("send_channel_message", {
+    p_channel_id: channelId,
+    p_content: content,
+  });
   if (error) throw error;
+  if (!data) throw new Error("Message was not created");
+
   const row = data as {
     id: string;
     channel_id: string;
     user_id: string;
     content: string;
     created_at: string;
-    profiles: unknown;
   };
   return {
     id: row.id,
@@ -239,7 +247,7 @@ export async function sendChannelMessage(
     user_id: row.user_id,
     content: row.content,
     created_at: row.created_at,
-    profiles: (Array.isArray(row.profiles) ? row.profiles[0] : row.profiles) as Profile | undefined,
+    profiles: { id: userId, display_name: "", created_at: "" } as Profile,
   };
 }
 
@@ -292,20 +300,27 @@ export async function sendDmMessage(
   content: string
 ): Promise<DmMessage> {
   const supabase = requireClient();
-  const { data, error } = await supabase
-    .from("dm_messages")
-    .insert({ conversation_id: conversationId, user_id: userId, content })
-    .select("id, conversation_id, user_id, content, created_at, profiles(id, display_name, created_at)")
-    .single();
+  const { data, error } = await supabase.rpc("send_dm_message", {
+    p_conversation_id: conversationId,
+    p_content: content,
+  });
   if (error) throw error;
+  if (!data) throw new Error("Message was not created");
 
+  const row = data as {
+    id: string;
+    conversation_id: string;
+    user_id: string;
+    content: string;
+    created_at: string;
+  };
   return {
-    id: data.id,
-    dm_id: data.conversation_id,
-    user_id: data.user_id,
-    content: data.content,
-    created_at: data.created_at,
-    profiles: data.profiles as unknown as Profile | undefined,
+    id: row.id,
+    dm_id: row.conversation_id,
+    user_id: row.user_id,
+    content: row.content,
+    created_at: row.created_at,
+    profiles: { id: userId, display_name: "", created_at: "" } as Profile,
   };
 }
 
