@@ -18,6 +18,12 @@ function toMember(profile: Profile): Member {
   };
 }
 
+export async function ensureUserProfile(): Promise<void> {
+  const supabase = requireClient();
+  const { error } = await supabase.rpc("ensure_user_profile");
+  if (error) throw error;
+}
+
 export async function fetchProfiles(): Promise<Profile[]> {
   const supabase = requireClient();
   const { data, error } = await supabase
@@ -40,21 +46,11 @@ export async function fetchProfiles(): Promise<Profile[]> {
   }));
 }
 
-export async function fetchUserChannels(userId: string): Promise<Channel[]> {
+export async function fetchUserChannels(_userId: string): Promise<Channel[]> {
   const supabase = requireClient();
-  const { data, error } = await supabase
-    .from("channel_members")
-    .select("channels(id, name, description, created_at)")
-    .eq("user_id", userId)
-    .order("joined_at", { ascending: true });
+  const { data, error } = await supabase.rpc("get_my_channels");
   if (error) throw error;
-
-  const channels: Channel[] = [];
-  for (const row of data ?? []) {
-    const ch = row.channels as unknown as Channel | null;
-    if (ch) channels.push(ch);
-  }
-  return channels.sort((a, b) => a.name.localeCompare(b.name));
+  return (data ?? []) as Channel[];
 }
 
 export async function fetchChannelMessages(channelIds: string[]): Promise<Message[]> {
@@ -85,19 +81,27 @@ export async function fetchChannelMessages(channelIds: string[]): Promise<Messag
 
 export async function fetchChannelMembers(channelId: string): Promise<ChannelMember[]> {
   const supabase = requireClient();
-  const { data, error } = await supabase
-    .from("channel_members")
-    .select("user_id, joined_at, profiles(id, display_name, custom_status, user_status, created_at)")
-    .eq("channel_id", channelId)
-    .order("joined_at", { ascending: true });
+  const { data, error } = await supabase.rpc("get_channel_members", {
+    p_channel_id: channelId,
+  });
   if (error) throw error;
 
   return (data ?? []).map((row: {
     user_id: string;
     joined_at: string;
-    profiles: unknown;
+    profile_id: string;
+    display_name: string;
+    custom_status: string;
+    user_status: string;
+    profile_created_at: string;
   }) => {
-    const profile = row.profiles as Profile;
+    const profile: Profile = {
+      id: row.profile_id,
+      display_name: row.display_name,
+      custom_status: row.custom_status ?? "",
+      user_status: (row.user_status ?? "active") as Profile["user_status"],
+      created_at: row.profile_created_at,
+    };
     return {
       user_id: row.user_id,
       joined_at: row.joined_at,
@@ -178,30 +182,24 @@ export async function fetchDmMessages(conversationIds: string[]): Promise<DmMess
 export async function createChannel(
   name: string,
   description: string | null,
-  userId: string
+  _userId: string
 ): Promise<Channel> {
   const supabase = requireClient();
-
-  const { data: channel, error } = await supabase
-    .from("channels")
-    .insert({ name, description })
-    .select("id, name, description, created_at")
-    .single();
+  const { data, error } = await supabase.rpc("create_channel", {
+    channel_name: name,
+    channel_description: description,
+  });
   if (error) throw error;
-
-  const { error: memberError } = await supabase
-    .from("channel_members")
-    .insert({ channel_id: channel.id, user_id: userId });
-  if (memberError) throw memberError;
-
-  return channel;
+  if (!data) throw new Error("Channel was not created");
+  return data as Channel;
 }
 
 export async function addChannelMember(channelId: string, userId: string): Promise<void> {
   const supabase = requireClient();
-  const { error } = await supabase
-    .from("channel_members")
-    .insert({ channel_id: channelId, user_id: userId });
+  const { error } = await supabase.rpc("add_channel_member", {
+    p_channel_id: channelId,
+    p_user_id: userId,
+  });
   if (error) throw error;
 }
 

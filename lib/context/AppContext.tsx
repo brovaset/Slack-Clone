@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import {
   addChannelMember,
   createChannel,
+  ensureUserProfile,
   fetchChannelMembers,
   fetchChannelMessages,
   fetchDmMessages,
@@ -18,6 +19,7 @@ import {
   updateProfile,
 } from "@/lib/data";
 import { createClient } from "@/lib/supabase/client";
+import { getErrorMessage } from "@/lib/supabase/errors";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { showToast } from "@/lib/toast";
 import {
@@ -140,6 +142,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     setLoading(true);
     try {
+      await ensureUserProfile();
       const profiles = await fetchProfiles();
       setMembers(profilesToMembers(profiles, user.id));
 
@@ -170,7 +173,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         await loadChannelMembers(activeChannelId);
       }
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to load data");
+      showToast(getErrorMessage(err, "Failed to load data"));
     } finally {
       setLoading(false);
     }
@@ -325,7 +328,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         );
         return created;
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Failed to create channel";
+        const msg = getErrorMessage(err, "Failed to create channel");
         if (msg.includes("duplicate") || msg.includes("unique")) {
           showToast("A channel with that name already exists.");
         } else {
