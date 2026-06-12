@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3001",
-    "build": "next build",
-    "build:pages": "GITHUB_PAGES=true next build",
+    "dev": "node scripts/generate-supabase-config.mjs && next dev -p 3001",
+    "build": "node scripts/generate-supabase-config.mjs && next build",
+    "build:pages": "node scripts/generate-supabase-config.mjs && GITHUB_PAGES=true next build",
     "start": "next start",
     "lint": "next lint"
   },
