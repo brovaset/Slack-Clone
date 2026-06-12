@@ -181,6 +181,7 @@ export async function createChannel(
   userId: string
 ): Promise<Channel> {
   const supabase = requireClient();
+
   const { data: channel, error } = await supabase
     .from("channels")
     .insert({ name, description })
@@ -274,11 +275,15 @@ export async function getOrCreateDm(
     .single();
   if (convError) throw convError;
 
-  const { error: partError } = await supabase.from("dm_participants").insert([
-    { conversation_id: conversation.id, user_id: currentUserId },
-    { conversation_id: conversation.id, user_id: otherUserId },
-  ]);
-  if (partError) throw partError;
+  const { error: selfPartError } = await supabase
+    .from("dm_participants")
+    .insert({ conversation_id: conversation.id, user_id: currentUserId });
+  if (selfPartError) throw selfPartError;
+
+  const { error: otherPartError } = await supabase
+    .from("dm_participants")
+    .insert({ conversation_id: conversation.id, user_id: otherUserId });
+  if (otherPartError) throw otherPartError;
 
   return conversation.id;
 }
