@@ -27,11 +27,20 @@ jobs:
           SUPABASE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
           SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
+          missing=0
           if [ -z "$SUPABASE_URL" ]; then
-            echo "::warning::Missing secret NEXT_PUBLIC_SUPABASE_URL — app will deploy but auth will not work"
+            echo "::error::Missing repository secret NEXT_PUBLIC_SUPABASE_URL"
+            missing=1
           fi
           if [ -z "$SUPABASE_KEY" ] && [ -z "$SUPABASE_ANON_KEY" ]; then
-            echo "::warning::Missing Supabase key secret — app will deploy but auth will not work"
+            echo "::error::Missing repository secret NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (or NEXT_PUBLIC_SUPABASE_ANON_KEY)"
+            missing=1
+          fi
+          if [ "$missing" -eq 1 ]; then
+            echo ""
+            echo "Add secrets at: https://github.com/brovaset/Slack-Clone/settings/secrets/actions"
+            echo "Use Repository secrets (not Environment or Dependabot). Names must match exactly."
+            exit 1
           fi
 
       - name: Setup Node
@@ -55,8 +64,8 @@ jobs:
         run: |
           test -f out/index.html || (echo "::error::out/index.html missing — build failed" && exit 1)
           grep -q "__next" out/index.html || (echo "::error::out/index.html is not the Next.js app" && exit 1)
-          if ! grep -rq 'supabase\.co' out/_next/static/chunks/; then
-            echo "::error::Supabase URL not in client bundle. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY repository secrets, then redeploy."
+          if ! grep -rqE 'url:"https://[a-z0-9]+\.supabase\.co"' out/_next/static/chunks/; then
+            echo "::error::Supabase project URL not embedded in client bundle. Check repository secrets and redeploy."
             exit 1
           fi
           touch out/.nojekyll
