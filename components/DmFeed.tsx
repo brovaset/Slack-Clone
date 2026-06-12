@@ -56,9 +56,10 @@ export default function DmFeed({ displayName, userId }: DmFeedProps) {
     return () => document.removeEventListener(AppEvents.loadDraft, onLoadDraft);
   }, []);
 
-  function handleSend() {
-    if (!newMessage.trim() || !activeDmId) return;
-    addDmMessage(activeDmId, userId, displayName, newMessage.trim());
+  function handleSend(text: string, file?: File) {
+    if (!activeDmId) return;
+    if (!text && !file) return;
+    addDmMessage(activeDmId, userId, displayName, text, file);
     setNewMessage("");
   }
 

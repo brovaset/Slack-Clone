@@ -22,6 +22,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getErrorMessage } from "@/lib/supabase/errors";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { showToast } from "@/lib/toast";
+import { uploadChatFile } from "@/lib/uploads";
 import {
   RATE_LIMITS,
   checkRateLimit,
@@ -89,8 +90,20 @@ interface AppContextValue {
   endHuddle: () => void;
   openDmWithMember: (member: Member) => Promise<void>;
   addChannel: (name: string, description?: string) => Promise<Channel | null>;
-  addMessage: (channelId: string, userId: string, displayName: string, content: string) => Promise<void>;
-  addDmMessage: (dmId: string, userId: string, displayName: string, content: string) => Promise<void>;
+  addMessage: (
+    channelId: string,
+    userId: string,
+    displayName: string,
+    content: string,
+    file?: File
+  ) => Promise<void>;
+  addDmMessage: (
+    dmId: string,
+    userId: string,
+    displayName: string,
+    content: string,
+    file?: File
+  ) => Promise<void>;
   addMemberToChannel: (channelId: string, userId: string) => Promise<void>;
   removeMemberFromChannel: (channelId: string, userId: string) => Promise<void>;
   refreshChannelMembers: (channelId: string) => Promise<void>;
@@ -213,6 +226,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
             const senderName = member?.name.replace(/ \(you\)$/, "").trim();
             const msg: Message = {
               ...raw,
+              attachment_url: raw.attachment_url ?? null,
+              attachment_name: raw.attachment_name ?? null,
+              attachment_type: raw.attachment_type ?? null,
               profiles:
                 raw.profiles?.display_name?.trim()
                   ? raw.profiles
@@ -245,13 +261,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
             user_id: string;
             content: string;
             created_at: string;
+            attachment_url?: string | null;
+            attachment_name?: string | null;
+            attachment_type?: string | null;
           };
+          const member = members.find((m) => m.id === raw.user_id);
+          const senderName = member?.name.replace(/ \(you\)$/, "").trim();
           const msg: DmMessage = {
             id: raw.id,
             dm_id: raw.conversation_id,
             user_id: raw.user_id,
             content: raw.content,
             created_at: raw.created_at,
+            attachment_url: raw.attachment_url ?? null,
+            attachment_name: raw.attachment_name ?? null,
+            attachment_type: raw.attachment_type ?? null,
+            profiles: senderName
+              ? {
+                  id: member!.id,
+                  display_name: senderName,
+                  created_at: "",
+                  user_status: member!.status,
+                }
+              : undefined,
           };
           setDmMessages((prev) => {
             if (prev.some((m) => m.id === msg.id)) return prev;
@@ -345,7 +377,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const addMessage = useCallback(
-    async (channelId: string, userId: string, _displayName: string, content: string) => {
+    async (
+      channelId: string,
+      userId: string,
+      displayName: string,
+      content: string,
+      file?: File
+    ) => {
       const rate = checkRateLimit(
         `message:${channelId}`,
         RATE_LIMITS.message.max,
@@ -356,16 +394,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const safeContent = sanitizeMessage(content);
-      if (!safeContent) return;
+      const trimmed = content.trim();
+      if (!trimmed && !file) return;
+
+      const safeContent = trimmed ? sanitizeMessage(trimmed) : "";
+      if (trimmed && !safeContent) return;
 
       try {
-        const message = await sendChannelMessage(channelId, userId, safeContent);
+        const attachment = file ? await uploadChatFile(file, userId) : undefined;
+        const message = await sendChannelMessage(
+          channelId,
+          userId,
+          safeContent ?? "",
+          attachment
+        );
         const withSender: Message = {
           ...message,
           profiles: {
             id: userId,
-            display_name: _displayName,
+            display_name: displayName,
             created_at: message.created_at,
             user_status: "active",
           },
@@ -382,7 +429,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const addDmMessage = useCallback(
-    async (dmId: string, userId: string, displayName: string, content: string) => {
+    async (
+      dmId: string,
+      userId: string,
+      displayName: string,
+      content: string,
+      file?: File
+    ) => {
       const rate = checkRateLimit(
         `dm-message:${dmId}`,
         RATE_LIMITS.message.max,
@@ -393,11 +446,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const safeContent = sanitizeMessage(content);
-      if (!safeContent) return;
+      const trimmed = content.trim();
+      if (!trimmed && !file) return;
+
+      const safeContent = trimmed ? sanitizeMessage(trimmed) : "";
+      if (trimmed && !safeContent) return;
 
       try {
-        const message = await sendDmMessage(dmId, userId, safeContent);
+        const attachment = file ? await uploadChatFile(file, userId) : undefined;
+        const message = await sendDmMessage(dmId, userId, safeContent ?? "", attachment);
         const withSender: DmMessage = {
           ...message,
           profiles: {

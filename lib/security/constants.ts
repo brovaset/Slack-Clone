@@ -11,6 +11,19 @@ export const LIMITS = {
   fileName: 255,
 } as const;
 
+export const UPLOAD = {
+  bucket: "chat-uploads",
+  maxBytes: 10 * 1024 * 1024,
+  allowedMimeTypes: [
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "application/pdf",
+    "text/plain",
+  ],
+} as const;
+
 export const RATE_LIMITS = {
   message: { max: 30, windowMs: 60_000 },
   channel: { max: 5, windowMs: 600_000 },

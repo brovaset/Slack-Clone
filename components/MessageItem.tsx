@@ -3,6 +3,7 @@
 import { useApp } from "@/lib/context/AppContext";
 import type { DmMessage, Message } from "@/lib/types";
 import { formatMessageTime, getAvatarColor, messageSenderName } from "@/lib/utils";
+import MessageAttachmentContent from "./MessageAttachmentContent";
 
 interface MessageItemProps {
   message: Message | DmMessage;
@@ -21,9 +22,20 @@ export default function MessageItem({ message, isGrouped = false }: MessageItemP
             {formatMessageTime(message.created_at)}
           </span>
         </div>
-        <p className="text-[#1D1C1D] text-[15px] leading-[22px] break-words min-w-0 flex-1">
-          {message.content}
-        </p>
+        <div className="min-w-0 flex-1">
+          {message.content && (
+            <p className="text-[#1D1C1D] text-[15px] leading-[22px] break-words">
+              {message.content}
+            </p>
+          )}
+          {message.attachment_url && message.attachment_name && message.attachment_type && (
+            <MessageAttachmentContent
+              url={message.attachment_url}
+              name={message.attachment_name}
+              type={message.attachment_type}
+            />
+          )}
+        </div>
       </div>
     );
   }
@@ -45,9 +57,18 @@ export default function MessageItem({ message, isGrouped = false }: MessageItemP
             {formatMessageTime(message.created_at)}
           </span>
         </div>
-        <p className="text-[#1D1C1D] text-[15px] leading-[22px] break-words">
-          {message.content}
-        </p>
+        {message.content && (
+          <p className="text-[#1D1C1D] text-[15px] leading-[22px] break-words">
+            {message.content}
+          </p>
+        )}
+        {message.attachment_url && message.attachment_name && message.attachment_type && (
+          <MessageAttachmentContent
+            url={message.attachment_url}
+            name={message.attachment_name}
+            type={message.attachment_type}
+          />
+        )}
       </div>
     </div>
   );

@@ -73,9 +73,10 @@ export default function ChannelFeed({ displayName, userId }: ChannelFeedProps) {
     return () => document.removeEventListener(AppEvents.loadDraft, onLoadDraft);
   }, []);
 
-  function handleSend() {
-    if (!newMessage.trim() || !activeChannelId) return;
-    addMessage(activeChannelId, userId, displayName, newMessage.trim());
+  function handleSend(text: string, file?: File) {
+    if (!activeChannelId) return;
+    if (!text && !file) return;
+    addMessage(activeChannelId, userId, displayName, text, file);
     setNewMessage("");
   }
 

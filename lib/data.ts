@@ -1,4 +1,5 @@
 import { requireClient } from "@/lib/supabase/client";
+import type { UploadedAttachment } from "@/lib/uploads";
 import type {
   Channel,
   ChannelMember,
@@ -8,6 +9,20 @@ import type {
   Message,
   Profile,
 } from "@/lib/types";
+
+type AttachmentRow = {
+  attachment_url?: string | null;
+  attachment_name?: string | null;
+  attachment_type?: string | null;
+};
+
+function mapAttachmentFields(row: AttachmentRow) {
+  return {
+    attachment_url: row.attachment_url ?? null,
+    attachment_name: row.attachment_name ?? null,
+    attachment_type: row.attachment_type ?? null,
+  };
+}
 
 function toMember(profile: Profile): Member {
   return {
@@ -64,12 +79,16 @@ export async function fetchChannelMessages(channelIds: string[]): Promise<Messag
     content: string;
     created_at: string;
     display_name: string;
+    attachment_url: string | null;
+    attachment_name: string | null;
+    attachment_type: string | null;
   }) => ({
     id: m.id,
     channel_id: m.channel_id,
     user_id: m.user_id,
     content: m.content,
     created_at: m.created_at,
+    ...mapAttachmentFields(m),
     profiles: {
       id: m.user_id,
       display_name: m.display_name?.trim() || "Unknown",
@@ -153,12 +172,16 @@ export async function fetchDmMessages(conversationIds: string[]): Promise<DmMess
     content: string;
     created_at: string;
     display_name: string;
+    attachment_url: string | null;
+    attachment_name: string | null;
+    attachment_type: string | null;
   }) => ({
     id: m.id,
     dm_id: m.conversation_id,
     user_id: m.user_id,
     content: m.content,
     created_at: m.created_at,
+    ...mapAttachmentFields(m),
     profiles: {
       id: m.user_id,
       display_name: m.display_name?.trim() || "Unknown",
@@ -206,29 +229,28 @@ export async function removeChannelMember(channelId: string, userId: string): Pr
 export async function sendChannelMessage(
   channelId: string,
   userId: string,
-  content: string
+  content: string,
+  attachment?: UploadedAttachment
 ): Promise<Message> {
   const supabase = requireClient();
   const { data, error } = await supabase.rpc("send_channel_message", {
     p_channel_id: channelId,
     p_content: content,
+    p_attachment_url: attachment?.url ?? null,
+    p_attachment_name: attachment?.name ?? null,
+    p_attachment_type: attachment?.type ?? null,
   });
   if (error) throw error;
   if (!data) throw new Error("Message was not created");
 
-  const row = data as {
-    id: string;
-    channel_id: string;
-    user_id: string;
-    content: string;
-    created_at: string;
-  };
+  const row = data as Message;
   return {
     id: row.id,
     channel_id: row.channel_id,
     user_id: row.user_id,
     content: row.content,
     created_at: row.created_at,
+    ...mapAttachmentFields(row),
   };
 }
 
@@ -248,12 +270,16 @@ export async function getOrCreateDm(
 export async function sendDmMessage(
   conversationId: string,
   userId: string,
-  content: string
+  content: string,
+  attachment?: UploadedAttachment
 ): Promise<DmMessage> {
   const supabase = requireClient();
   const { data, error } = await supabase.rpc("send_dm_message", {
     p_conversation_id: conversationId,
     p_content: content,
+    p_attachment_url: attachment?.url ?? null,
+    p_attachment_name: attachment?.name ?? null,
+    p_attachment_type: attachment?.type ?? null,
   });
   if (error) throw error;
   if (!data) throw new Error("Message was not created");
@@ -264,6 +290,9 @@ export async function sendDmMessage(
     user_id: string;
     content: string;
     created_at: string;
+    attachment_url?: string | null;
+    attachment_name?: string | null;
+    attachment_type?: string | null;
   };
   return {
     id: row.id,
@@ -271,6 +300,7 @@ export async function sendDmMessage(
     user_id: row.user_id,
     content: row.content,
     created_at: row.created_at,
+    ...mapAttachmentFields(row),
   };
 }
 

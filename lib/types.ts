@@ -27,6 +27,9 @@ export interface Message {
   content: string;
   created_at: string;
   profiles?: Profile;
+  attachment_url?: string | null;
+  attachment_name?: string | null;
+  attachment_type?: string | null;
 }
 
 export interface DirectMessage {
@@ -43,6 +46,9 @@ export interface DmMessage {
   content: string;
   created_at: string;
   profiles?: Profile;
+  attachment_url?: string | null;
+  attachment_name?: string | null;
+  attachment_type?: string | null;
 }
 
 export interface Member {

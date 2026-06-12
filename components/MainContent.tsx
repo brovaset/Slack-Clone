@@ -69,10 +69,11 @@ export default function MainContent({ displayName, userId }: MainContentProps) {
 
   if (railView === "files") {
     const files = messages
-      .filter((m) => m.content.includes("[Attached:"))
+      .filter((m) => m.attachment_url && m.attachment_name)
       .map((m) => ({
         id: m.id,
-        name: m.content.match(/\[Attached: (.+?)\]/)?.[1] ?? "file",
+        name: m.attachment_name!,
+        url: m.attachment_url!,
         from: messageSenderName(m, members),
         channel: getChannel(m.channel_id)?.name ?? "",
       }));
@@ -91,22 +92,33 @@ export default function MainContent({ displayName, userId }: MainContentProps) {
             <ul className="space-y-2">
               {files.map((f) => (
                 <li key={f.id}>
-                  <button
-                    onClick={() => openChannel(messages.find((m) => m.id === f.id)!.channel_id)}
-                    className="w-full flex items-center gap-3 p-3 rounded hover:bg-[#F8F8F8] border border-[#E8E8E8] text-left"
-                  >
-                    <div className="w-10 h-10 bg-[#E8F5FA] rounded flex items-center justify-center text-[#1264A3]">
+                  <div className="flex items-center gap-3 p-3 rounded border border-[#E8E8E8] hover:bg-[#F8F8F8]">
+                    <div className="w-10 h-10 bg-[#E8F5FA] rounded flex items-center justify-center text-[#1264A3] shrink-0">
                       <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
                       </svg>
                     </div>
-                    <div>
-                      <p className="font-bold text-[15px]">{f.name}</p>
+                    <div className="flex-1 min-w-0">
+                      <a
+                        href={f.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-bold text-[15px] text-[#1264A3] hover:underline truncate block"
+                      >
+                        {f.name}
+                      </a>
                       <p className="text-[13px] text-[#616061]">
                         Shared by {f.from} in #{f.channel}
                       </p>
                     </div>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => openChannel(messages.find((m) => m.id === f.id)!.channel_id)}
+                      className="text-[13px] text-[#1264A3] hover:underline shrink-0"
+                    >
+                      View
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>

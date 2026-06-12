@@ -3,15 +3,15 @@
 import { EMOJI_LIST } from "@/lib/constants";
 import { useApp } from "@/lib/context/AppContext";
 import { LIMITS } from "@/lib/security";
-import { sanitizeFileName } from "@/lib/security/sanitize";
 import { showToast } from "@/lib/toast";
-import { useRef, useState } from "react";
+import { isImageAttachment, validateChatUpload } from "@/lib/uploads";
+import { useEffect, useRef, useState } from "react";
 
 interface MessageComposerProps {
   placeholder: string;
   value: string;
   onChange: (v: string) => void;
-  onSend: () => void;
+  onSend: (text: string, file?: File) => void;
   target: string;
   targetType: "channel" | "dm";
 }
@@ -29,6 +29,21 @@ export default function MessageComposer({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showEmoji, setShowEmoji] = useState(false);
   const [showMentions, setShowMentions] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  function clearPendingFile() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPendingFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
   function insertAtCursor(text: string) {
     const el = textareaRef.current;
@@ -49,17 +64,24 @@ export default function MessageComposer({
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      onSend();
+      handleSend();
     }
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) {
-      const safeName = sanitizeFileName(file.name);
-      insertAtCursor(`[Attached: ${safeName}] `);
-      showToast(`Attached ${safeName}`);
+    if (!file) return;
+
+    const validationError = validateChatUpload(file);
+    if (validationError) {
+      showToast(validationError);
+      e.target.value = "";
+      return;
     }
+
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPendingFile(file);
+    setPreviewUrl(isImageAttachment(file.type) ? URL.createObjectURL(file) : null);
     e.target.value = "";
   }
 
@@ -77,6 +99,13 @@ export default function MessageComposer({
     if (value.trim()) saveDraft(value, target, targetType);
   }
 
+  function handleSend() {
+    if (!value.trim() && !pendingFile) return;
+    onSend(value.trim(), pendingFile ?? undefined);
+    clearPendingFile();
+  }
+
+  const canSend = value.trim().length > 0 || pendingFile !== null;
   const mentionCandidates = members.filter((m) => !m.name.endsWith("(you)"));
 
   return (
@@ -115,17 +144,44 @@ export default function MessageComposer({
         ref={fileInputRef}
         type="file"
         className="hidden"
-        accept="image/*,.pdf,.txt,.doc,.docx"
+        accept="image/jpeg,image/png,image/gif,image/webp,.pdf,.txt"
         onChange={handleFileChange}
       />
 
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          onSend();
+          handleSend();
         }}
       >
         <div className="border border-[#868686] rounded-lg overflow-hidden focus-within:border-[#1264A3] transition-colors shadow-sm">
+          {pendingFile && (
+            <div className="px-3 pt-3 flex items-start gap-2">
+              {previewUrl ? (
+                <img
+                  src={previewUrl}
+                  alt={pendingFile.name}
+                  className="h-16 w-16 rounded object-cover border border-[#E8E8E8]"
+                />
+              ) : (
+                <div className="h-16 w-16 rounded border border-[#E8E8E8] bg-[#F8F8F8] flex items-center justify-center text-[#616061] text-xs px-1 text-center truncate">
+                  {pendingFile.name}
+                </div>
+              )}
+              <div className="flex-1 min-w-0 pt-1">
+                <p className="text-[13px] font-bold text-[#1D1C1D] truncate">{pendingFile.name}</p>
+                <p className="text-[12px] text-[#616061]">Ready to send</p>
+              </div>
+              <button
+                type="button"
+                onClick={clearPendingFile}
+                className="text-[#616061] hover:text-[#E01E5A] p-1"
+                title="Remove attachment"
+              >
+                <RemoveIcon />
+              </button>
+            </div>
+          )}
           <textarea
             ref={textareaRef}
             value={value}
@@ -139,7 +195,7 @@ export default function MessageComposer({
           />
           <div className="flex items-center justify-between px-2 py-1.5">
             <div className="flex items-center gap-0.5">
-              <ComposerBtn title="Attach" onClick={() => fileInputRef.current?.click()}>
+              <ComposerBtn title="Attach file or image" onClick={() => fileInputRef.current?.click()}>
                 <PlusIcon />
               </ComposerBtn>
               <ComposerBtn
@@ -175,11 +231,11 @@ export default function MessageComposer({
             <div className="flex items-center gap-1">
               <button
                 type="submit"
-                disabled={!value.trim()}
+                disabled={!canSend}
                 className="p-1.5 rounded disabled:opacity-30 hover:bg-[#F8F8F8] transition-colors"
                 title="Send"
               >
-                <SendArrowIcon active={!!value.trim()} />
+                <SendArrowIcon active={canSend} />
               </button>
             </div>
           </div>
@@ -232,6 +288,13 @@ function SendArrowIcon({ active }: { active: boolean }) {
   return (
     <svg className={`w-5 h-5 ${active ? "text-[#007A5A]" : "text-[#ABABAD]"}`} viewBox="0 0 20 20" fill="currentColor">
       <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+    </svg>
+  );
+}
+function RemoveIcon() {
+  return (
+    <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
     </svg>
   );
 }
