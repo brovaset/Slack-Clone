@@ -2,9 +2,8 @@
 
 import { useApp } from "@/lib/context/AppContext";
 import { AppEvents, parseLoadDraftDetail } from "@/lib/security/events";
-import type { Message } from "@/lib/types";
-import { formatDateDivider } from "@/lib/utils";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { buildChannelFeedItems } from "@/lib/messageFeed";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import HuddleBanner from "./HuddleBanner";
 import MessageComposer from "./MessageComposer";
 import MessageItem from "./MessageItem";
@@ -12,29 +11,6 @@ import MessageItem from "./MessageItem";
 interface ChannelFeedProps {
   displayName: string;
   userId: string;
-}
-
-type FeedItem =
-  | { type: "divider"; label: string; key: string }
-  | { type: "message"; message: Message; isGrouped: boolean; key: string };
-
-function buildFeedItems(messages: Message[]): FeedItem[] {
-  const items: FeedItem[] = [];
-  let lastDate = "";
-  let lastUserId = "";
-
-  for (const message of messages) {
-    const dateLabel = formatDateDivider(message.created_at);
-    if (dateLabel !== lastDate) {
-      items.push({ type: "divider", label: dateLabel, key: `d-${dateLabel}` });
-      lastDate = dateLabel;
-      lastUserId = "";
-    }
-    const isGrouped = message.user_id === lastUserId;
-    items.push({ type: "message", message, isGrouped, key: message.id });
-    lastUserId = message.user_id;
-  }
-  return items;
 }
 
 export default function ChannelFeed({ displayName, userId }: ChannelFeedProps) {
@@ -47,8 +23,10 @@ export default function ChannelFeed({ displayName, userId }: ChannelFeedProps) {
     startHuddle,
     channelMembers,
     searchQuery,
+    getChannelLastViewedAt,
   } = useApp();
   const [newMessage, setNewMessage] = useState("");
+  const [newMessagesDividerAt, setNewMessagesDividerAt] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const channel = activeChannelId ? getChannel(activeChannelId) : undefined;
@@ -58,7 +36,22 @@ export default function ChannelFeed({ displayName, userId }: ChannelFeedProps) {
         m.content.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : allMessages;
-  const feedItems = useMemo(() => buildFeedItems(messages), [messages]);
+
+  useLayoutEffect(() => {
+    if (!activeChannelId) {
+      setNewMessagesDividerAt(null);
+      return;
+    }
+    setNewMessagesDividerAt(getChannelLastViewedAt(activeChannelId));
+  }, [activeChannelId, getChannelLastViewedAt]);
+
+  const feedItems = useMemo(
+    () =>
+      searchQuery.trim()
+        ? buildChannelFeedItems(messages, null)
+        : buildChannelFeedItems(messages, newMessagesDividerAt),
+    [messages, newMessagesDividerAt, searchQuery]
+  );
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -138,19 +131,49 @@ export default function ChannelFeed({ displayName, userId }: ChannelFeedProps) {
           </div>
         </div>
 
-        {feedItems.map((item) =>
-          item.type === "divider" ? (
-            <div key={item.key} className="flex items-center gap-3 px-5 py-3">
-              <div className="flex-1 h-px bg-[#E8E8E8]" />
-              <span className="text-[13px] font-bold text-[#1D1C1D] border border-[#E8E8E8] rounded-full px-3 py-0.5">
-                {item.label}
-              </span>
-              <div className="flex-1 h-px bg-[#E8E8E8]" />
-            </div>
-          ) : (
-            <MessageItem key={item.key} message={item.message} isGrouped={item.isGrouped} />
-          )
-        )}
+        {feedItems.map((item) => {
+          if (item.type === "date") {
+            return (
+              <div key={item.key} className="flex items-center gap-3 px-5 py-3">
+                <div className="flex-1 h-px bg-[#E8E8E8]" />
+                <span className="text-[13px] font-bold text-[#1D1C1D] border border-[#E8E8E8] rounded-full px-3 py-0.5">
+                  {item.label}
+                </span>
+                <div className="flex-1 h-px bg-[#E8E8E8]" />
+              </div>
+            );
+          }
+          if (item.type === "new-messages") {
+            return (
+              <div
+                key={item.key}
+                className="flex items-center gap-3 px-5 py-4 my-1"
+                role="separator"
+                aria-label="New messages"
+              >
+                <div className="flex-1 h-px bg-[#1264A3]" />
+                <span className="text-[12px] font-extrabold uppercase tracking-wide text-[#1264A3] px-2">
+                  New messages
+                </span>
+                <div className="flex-1 h-px bg-[#1264A3]" />
+              </div>
+            );
+          }
+          if (item.type === "topic-start") {
+            return (
+              <div key={item.key} className="px-5 py-2">
+                <div className="border-t border-dashed border-[#DDDDDD]" aria-hidden />
+              </div>
+            );
+          }
+          return (
+            <MessageItem
+              key={item.key}
+              message={item.message}
+              isGrouped={item.isGrouped}
+            />
+          );
+        })}
         <div ref={messagesEndRef} className="h-4" />
       </div>
 

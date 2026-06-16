@@ -3,7 +3,7 @@
 import { useApp } from "@/lib/context/AppContext";
 import { getAvatarColor } from "@/lib/utils";
 import type { Channel } from "@/lib/types";
-import { useEffect, useState, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useState, type RefObject } from "react";
 import { AppEvents } from "@/lib/security/events";
 import CreateChannelModal from "./CreateChannelModal";
 
@@ -24,10 +24,24 @@ export default function Sidebar({ workspaceRef }: SidebarProps) {
     setProfileMenuOpen,
     workspaceMenuOpen,
     setWorkspaceMenuOpen,
+    channelUnreadMap,
   } = useApp();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [channelsOpen, setChannelsOpen] = useState(true);
   const [dmsOpen, setDmsOpen] = useState(true);
+
+  const channelUnreadById = useMemo(() => {
+    const map: Record<string, typeof channelUnreadMap[string]> = {};
+    for (const channel of channels) {
+      map[channel.id] = channelUnreadMap[channel.id] ?? {
+        isUnread: false,
+        unreadCount: 0,
+        hasActivity: false,
+        lastMessageAt: null,
+      };
+    }
+    return map;
+  }, [channels, channelUnreadMap]);
 
   useEffect(() => {
     function onCreateChannel() {
@@ -37,9 +51,9 @@ export default function Sidebar({ workspaceRef }: SidebarProps) {
     return () => document.removeEventListener(AppEvents.openCreateChannel, onCreateChannel);
   }, []);
 
-  function handleChannelCreated(channel: Channel) {
+  const handleChannelCreated = useCallback((channel: Channel) => {
     openChannel(channel.id);
-  }
+  }, [openChannel]);
 
   return (
     <>
@@ -118,18 +132,13 @@ export default function Sidebar({ workspaceRef }: SidebarProps) {
                   onAdd={() => setShowCreateModal(true)}
                 >
                   {channels.map((channel) => (
-                    <button
+                    <ChannelSidebarItem
                       key={channel.id}
-                      onClick={() => openChannel(channel.id)}
-                      className={`w-full text-left px-2 py-[3px] rounded-md text-[15px] truncate transition-colors flex items-center gap-0.5 ${
-                        activeChannelId === channel.id
-                          ? "bg-[#1164A3] text-white"
-                          : "text-[#D1D2D3] hover:bg-[#350D36]"
-                      }`}
-                    >
-                      <span className="opacity-80 mr-0.5">#</span>
-                      {channel.name}
-                    </button>
+                      channel={channel}
+                      isActive={activeChannelId === channel.id}
+                      unreadInfo={channelUnreadById[channel.id]}
+                      onSelect={() => openChannel(channel.id)}
+                    />
                   ))}
                 </SidebarSection>
               )}
@@ -147,8 +156,8 @@ export default function Sidebar({ workspaceRef }: SidebarProps) {
                       onClick={() => openDm(dm.id)}
                       className={`w-full text-left px-2 py-[3px] rounded-md text-[15px] truncate transition-colors flex items-center gap-2 ${
                         activeDmId === dm.id && railView === "dms"
-                          ? "bg-[#1164A3] text-white"
-                          : "text-[#D1D2D3] hover:bg-[#350D36]"
+                          ? "bg-[#1164A3] text-white font-bold"
+                          : "text-[#D1D2D3] hover:bg-[#350D36] font-normal"
                       }`}
                     >
                       <span className="relative shrink-0">
@@ -196,6 +205,60 @@ export default function Sidebar({ workspaceRef }: SidebarProps) {
         onCreated={handleChannelCreated}
       />
     </>
+  );
+}
+
+function ChannelSidebarItem({
+  channel,
+  isActive,
+  unreadInfo,
+  onSelect,
+}: {
+  channel: Channel;
+  isActive: boolean;
+  unreadInfo: {
+    isUnread: boolean;
+    unreadCount: number;
+    hasActivity: boolean;
+    lastMessageAt: string | null;
+  };
+  onSelect: () => void;
+}) {
+  const showActivityDot = unreadInfo.hasActivity && !isActive;
+  const showUnreadBadge = unreadInfo.isUnread && unreadInfo.unreadCount > 0;
+
+  let rowClass =
+    "w-full text-left px-2 py-[3px] rounded-md text-[15px] truncate transition-colors flex items-center gap-1 min-h-[28px]";
+  if (isActive) {
+    rowClass += " bg-[#1164A3] text-white font-bold";
+  } else if (unreadInfo.isUnread) {
+    rowClass += " text-white font-bold hover:bg-[#350D36]";
+  } else {
+    rowClass += " text-[#D1D2D3] font-normal hover:bg-[#350D36]";
+  }
+
+  return (
+    <button type="button" onClick={onSelect} className={rowClass}>
+      <span className="opacity-80 mr-0.5 shrink-0">#</span>
+      <span className="truncate flex-1 min-w-0">{channel.name}</span>
+      {showActivityDot && (
+        <span
+          className={`w-2 h-2 rounded-full shrink-0 ${
+            unreadInfo.isUnread ? "bg-[#36C5F0]" : "bg-[#ABABAD]/60"
+          }`}
+          aria-hidden
+        />
+      )}
+      {showUnreadBadge && (
+        <span
+          className={`shrink-0 min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-bold leading-[18px] text-center ${
+            isActive ? "bg-white/25 text-white" : "bg-[#E01E5A] text-white"
+          }`}
+        >
+          {unreadInfo.unreadCount > 99 ? "99+" : unreadInfo.unreadCount}
+        </span>
+      )}
+    </button>
   );
 }
 

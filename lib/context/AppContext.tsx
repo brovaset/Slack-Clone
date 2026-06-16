@@ -47,6 +47,10 @@ import type {
   UserStatus,
 } from "@/lib/types";
 import {
+  type ChannelUnreadInfo,
+  useChannelTrack,
+} from "@/hooks/useChannelTrack";
+import {
   createContext,
   useCallback,
   useContext,
@@ -115,6 +119,9 @@ interface AppContextValue {
   getDm: (dmId: string) => DirectMessage | undefined;
   openChannel: (channelId: string) => void;
   openDm: (dmId: string) => void;
+  getChannelUnreadInfo: (channelId: string) => ChannelUnreadInfo;
+  getChannelLastViewedAt: (channelId: string) => string | null;
+  channelUnreadMap: Record<string, ChannelUnreadInfo>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -141,6 +148,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [customStatus, setCustomStatusState] = useState("");
   const [huddleActive, setHuddleActive] = useState(false);
   const [huddleLabel, setHuddleLabel] = useState<string | null>(null);
+
+  const {
+    getChannelUnreadInfo,
+    getLastViewedAt: getChannelLastViewedAt,
+    channelUnreadMap,
+  } = useChannelTrack(user?.id, messages, activeChannelId);
 
   const loadChannelMembers = useCallback(async (channelId: string) => {
     try {
@@ -695,6 +708,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         getDm,
         openChannel,
         openDm,
+        getChannelUnreadInfo,
+        getChannelLastViewedAt,
+        channelUnreadMap,
       }}
     >
       {children}

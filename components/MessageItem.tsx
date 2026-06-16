@@ -49,11 +49,11 @@ export default function MessageItem({ message, isGrouped = false }: MessageItemP
         {displayName.charAt(0).toUpperCase()}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-baseline gap-2 leading-tight">
-          <span className="font-bold text-[#1D1C1D] text-[15px] hover:underline cursor-pointer">
+        <div className="flex items-baseline gap-2 leading-tight mb-0.5">
+          <span className="font-extrabold text-[#1D1C1D] text-[15px] hover:underline cursor-pointer">
             {displayName}
           </span>
-          <span className="text-[12px] text-[#616061]">
+          <span className="text-[12px] text-[#616061] tabular-nums shrink-0">
             {formatMessageTime(message.created_at)}
           </span>
         </div>
