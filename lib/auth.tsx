@@ -32,6 +32,16 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function formatAuthError(message: string): string {
+  if (/email not confirmed/i.test(message)) {
+    return "Email not confirmed. In Supabase → SQL Editor, run: UPDATE auth.users SET email_confirmed_at = now() WHERE email = 'your@email.com'; Or turn off Confirm email under Authentication → Providers → Email.";
+  }
+  if (/rate limit/i.test(message)) {
+    return "Email rate limit exceeded. Wait an hour, use custom SMTP, or disable Confirm email in Supabase Auth settings.";
+  }
+  return message;
+}
+
 function mapUser(
   authUser: { id: string; email?: string; user_metadata?: Record<string, unknown> } | null
 ): AppUser | null {
@@ -84,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
       }
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) return { error: error.message };
+      if (error) return { error: formatAuthError(error.message) };
       return {};
     },
     [supabase]
@@ -108,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data: { display_name: safeName },
         },
       });
-      if (error) return { error: error.message };
+      if (error) return { error: formatAuthError(error.message) };
       return {};
     },
     [supabase]
