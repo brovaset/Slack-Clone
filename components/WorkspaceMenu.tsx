@@ -53,8 +53,6 @@ export default function WorkspaceMenu({
     };
   }, [open, onClose, anchorRefs]);
 
-  if (!open) return null;
-
   async function handleSwitch(workspaceId: string) {
     await switchWorkspace(workspaceId);
     onClose();
@@ -68,59 +66,61 @@ export default function WorkspaceMenu({
 
   return (
     <>
-      <div
-        ref={menuRef}
-        className="fixed left-[68px] top-2 z-50 w-[300px] bg-white rounded-lg shadow-[0_0_0_1px_rgba(29,28,29,0.13),0_8px_24px_rgba(0,0,0,0.15)] overflow-hidden"
-      >
-        <div className="px-4 py-3 border-b border-[#E8E8E8]">
-          <p className="text-[13px] font-bold text-[#616061] uppercase tracking-wide">
-            Workspaces
-          </p>
+      {open && (
+        <div
+          ref={menuRef}
+          className="fixed left-[68px] top-2 z-50 w-[300px] bg-white rounded-lg shadow-[0_0_0_1px_rgba(29,28,29,0.13),0_8px_24px_rgba(0,0,0,0.15)] overflow-hidden"
+        >
+          <div className="px-4 py-3 border-b border-[#E8E8E8]">
+            <p className="text-[13px] font-bold text-[#616061] uppercase tracking-wide">
+              Workspaces
+            </p>
+          </div>
+          <ul className="py-1 max-h-[320px] overflow-y-auto">
+            {workspaces.map((workspace) => {
+              const active = workspace.id === activeWorkspace?.id;
+              return (
+                <li key={workspace.id}>
+                  <button
+                    type="button"
+                    onClick={() => handleSwitch(workspace.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-[#1264A3]/10 transition-colors ${
+                      active ? "bg-[#E8F5FA]" : ""
+                    }`}
+                  >
+                    <WorkspaceIcon workspace={workspace} size="lg" selected={active} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[15px] font-bold text-[#1D1C1D] leading-tight truncate">
+                        {workspace.name}
+                      </p>
+                      <p className="text-[13px] text-[#616061] leading-tight truncate">
+                        {workspaceDomain(workspace.slug)}
+                      </p>
+                    </div>
+                    {active && (
+                      <span className="text-[#1264A3] shrink-0" aria-label="Current workspace">
+                        <CheckIcon />
+                      </span>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="border-t border-[#E8E8E8] py-1">
+            <button
+              type="button"
+              onClick={handleCreateOpen}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-[#1264A3]/10 text-[15px] font-medium text-[#1D1C1D]"
+            >
+              <span className="w-9 h-9 rounded-[8px] border border-dashed border-[#ABABAD] flex items-center justify-center text-[#616061] shrink-0">
+                <PlusIcon />
+              </span>
+              Add a workspace
+            </button>
+          </div>
         </div>
-        <ul className="py-1 max-h-[320px] overflow-y-auto">
-          {workspaces.map((workspace) => {
-            const active = workspace.id === activeWorkspace?.id;
-            return (
-              <li key={workspace.id}>
-                <button
-                  type="button"
-                  onClick={() => handleSwitch(workspace.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-[#1264A3]/10 transition-colors ${
-                    active ? "bg-[#E8F5FA]" : ""
-                  }`}
-                >
-                  <WorkspaceIcon workspace={workspace} size="lg" selected={active} />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[15px] font-bold text-[#1D1C1D] leading-tight truncate">
-                      {workspace.name}
-                    </p>
-                    <p className="text-[13px] text-[#616061] leading-tight truncate">
-                      {workspaceDomain(workspace.slug)}
-                    </p>
-                  </div>
-                  {active && (
-                    <span className="text-[#1264A3] shrink-0" aria-label="Current workspace">
-                      <CheckIcon />
-                    </span>
-                  )}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-        <div className="border-t border-[#E8E8E8] py-1">
-          <button
-            type="button"
-            onClick={handleCreateOpen}
-            className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-[#1264A3]/10 text-[15px] font-medium text-[#1D1C1D]"
-          >
-            <span className="w-9 h-9 rounded-[8px] border border-dashed border-[#ABABAD] flex items-center justify-center text-[#616061] shrink-0">
-              <PlusIcon />
-            </span>
-            Add a workspace
-          </button>
-        </div>
-      </div>
+      )}
 
       <CreateWorkspaceModal
         isOpen={showCreateModal}

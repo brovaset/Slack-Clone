@@ -56,8 +56,16 @@ export default function CreateWorkspaceModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-[1px]">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-8 mx-4">
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-[1px]"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-8 mx-4"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <h2 className="text-[28px] font-bold text-[#1D1C1D] mb-2 leading-tight">
           Create a workspace
         </h2>
