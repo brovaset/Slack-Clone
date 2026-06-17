@@ -32,6 +32,20 @@ export function saveChannelReadState(userId: string, state: ChannelReadMap): voi
   }
 }
 
+export function mergeReadStates(
+  local: ChannelReadMap,
+  remote: ChannelReadMap
+): ChannelReadMap {
+  const merged = { ...local };
+  for (const [channelId, entry] of Object.entries(remote)) {
+    const existing = merged[channelId];
+    if (!existing || entry.lastViewedAt > existing.lastViewedAt) {
+      merged[channelId] = entry;
+    }
+  }
+  return merged;
+}
+
 export function getLastMessageTimestamp(
   channelMessages: { created_at: string }[]
 ): string | null {
@@ -40,20 +54,25 @@ export function getLastMessageTimestamp(
 }
 
 export function countUnreadMessages(
-  channelMessages: { created_at: string }[],
-  lastViewedAt: string | null
+  channelMessages: { id: string; created_at: string }[],
+  lastViewedAt: string | null,
+  lastViewedMessageId?: string | null
 ): number {
   if (channelMessages.length === 0) return 0;
   if (!lastViewedAt) return channelMessages.length;
+
+  if (lastViewedMessageId) {
+    const idx = channelMessages.findIndex((m) => m.id === lastViewedMessageId);
+    if (idx >= 0) return channelMessages.length - idx - 1;
+  }
+
   return channelMessages.filter((m) => m.created_at > lastViewedAt).length;
 }
 
 export function isChannelUnread(
-  channelMessages: { created_at: string }[],
-  lastViewedAt: string | null
+  channelMessages: { id: string; created_at: string }[],
+  lastViewedAt: string | null,
+  lastViewedMessageId?: string | null
 ): boolean {
-  const lastAt = getLastMessageTimestamp(channelMessages);
-  if (!lastAt) return false;
-  if (!lastViewedAt) return true;
-  return lastAt > lastViewedAt;
+  return countUnreadMessages(channelMessages, lastViewedAt, lastViewedMessageId) > 0;
 }

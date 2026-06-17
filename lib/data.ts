@@ -1,3 +1,4 @@
+import type { ChannelReadMap } from "@/lib/channelReadState";
 import { requireClient } from "@/lib/supabase/client";
 import type { UploadedAttachment } from "@/lib/uploads";
 import type {
@@ -63,6 +64,36 @@ export async function fetchUserChannels(_userId: string): Promise<Channel[]> {
   const { data, error } = await supabase.rpc("get_my_channels");
   if (error) throw error;
   return (data ?? []) as Channel[];
+}
+
+export async function fetchChannelReadState(): Promise<ChannelReadMap> {
+  const supabase = requireClient();
+  const { data, error } = await supabase.rpc("get_my_channel_reads");
+  if (error) throw error;
+
+  const map: ChannelReadMap = {};
+  for (const row of data ?? []) {
+    const channelId = row.channel_id as string;
+    map[channelId] = {
+      lastViewedAt: row.last_viewed_at as string,
+      lastViewedMessageId: (row.last_viewed_message_id as string | null) ?? undefined,
+    };
+  }
+  return map;
+}
+
+export async function persistChannelRead(
+  channelId: string,
+  lastViewedAt: string,
+  lastViewedMessageId?: string
+): Promise<void> {
+  const supabase = requireClient();
+  const { error } = await supabase.rpc("mark_channel_read", {
+    p_channel_id: channelId,
+    p_last_viewed_at: lastViewedAt,
+    p_last_viewed_message_id: lastViewedMessageId ?? null,
+  });
+  if (error) throw error;
 }
 
 export async function fetchChannelMessages(channelIds: string[]): Promise<Message[]> {

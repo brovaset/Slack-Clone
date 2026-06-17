@@ -3,7 +3,8 @@
 import { useApp } from "@/lib/context/AppContext";
 import { AppEvents, parseLoadDraftDetail } from "@/lib/security/events";
 import { buildChannelFeedItems } from "@/lib/messageFeed";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useChannelEngagement } from "@/hooks/useChannelEngagement";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import HuddleBanner from "./HuddleBanner";
 import MessageComposer from "./MessageComposer";
 import MessageItem from "./MessageItem";
@@ -24,6 +25,7 @@ export default function ChannelFeed({ displayName, userId }: ChannelFeedProps) {
     channelMembers,
     searchQuery,
     getChannelLastViewedAt,
+    markChannelAsRead,
   } = useApp();
   const [newMessage, setNewMessage] = useState("");
   const [newMessagesDividerAt, setNewMessagesDividerAt] = useState<string | null>(null);
@@ -53,6 +55,17 @@ export default function ChannelFeed({ displayName, userId }: ChannelFeedProps) {
     [messages, newMessagesDividerAt, searchQuery]
   );
 
+  const handleChannelEngaged = useCallback(() => {
+    if (!activeChannelId) return;
+    markChannelAsRead(activeChannelId);
+  }, [activeChannelId, markChannelAsRead]);
+
+  const scrollRef = useChannelEngagement(
+    activeChannelId,
+    allMessages.length,
+    handleChannelEngaged
+  );
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -71,6 +84,7 @@ export default function ChannelFeed({ displayName, userId }: ChannelFeedProps) {
     if (!text && !file) return;
     addMessage(activeChannelId, userId, displayName, text, file);
     setNewMessage("");
+    markChannelAsRead(activeChannelId);
   }
 
   if (!activeChannelId || !channel) {
@@ -114,7 +128,7 @@ export default function ChannelFeed({ displayName, userId }: ChannelFeedProps) {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto slack-scrollbar">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto slack-scrollbar">
         <div className="px-5 py-6">
           <div className="flex items-start gap-3 mb-2">
             <div className="w-14 h-14 rounded-lg bg-[#E8F5FA] flex items-center justify-center text-[#1264A3] text-2xl font-bold shrink-0">

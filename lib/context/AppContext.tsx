@@ -121,6 +121,7 @@ interface AppContextValue {
   openDm: (dmId: string) => void;
   getChannelUnreadInfo: (channelId: string) => ChannelUnreadInfo;
   getChannelLastViewedAt: (channelId: string) => string | null;
+  markChannelAsRead: (channelId: string) => void;
   channelUnreadMap: Record<string, ChannelUnreadInfo>;
 }
 
@@ -152,8 +153,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const {
     getChannelUnreadInfo,
     getLastViewedAt: getChannelLastViewedAt,
+    markChannelRead,
     channelUnreadMap,
-  } = useChannelTrack(user?.id, messages, activeChannelId);
+  } = useChannelTrack(user?.id, messages);
+
+  const markChannelAsRead = useCallback(
+    (channelId: string) => {
+      markChannelRead(channelId);
+    },
+    [markChannelRead]
+  );
 
   const loadChannelMembers = useCallback(async (channelId: string) => {
     try {
@@ -710,6 +719,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         openDm,
         getChannelUnreadInfo,
         getChannelLastViewedAt,
+        markChannelAsRead,
         channelUnreadMap,
       }}
     >

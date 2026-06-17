@@ -43,6 +43,29 @@ export default function Sidebar({ workspaceRef }: SidebarProps) {
     return map;
   }, [channels, channelUnreadMap]);
 
+  const sortedChannels = useMemo(() => {
+    return [...channels].sort((a, b) => {
+      const unreadA = channelUnreadById[a.id];
+      const unreadB = channelUnreadById[b.id];
+
+      if (unreadA.isUnread !== unreadB.isUnread) {
+        return unreadA.isUnread ? -1 : 1;
+      }
+
+      if (unreadA.isUnread && unreadB.isUnread) {
+        const countDiff = unreadB.unreadCount - unreadA.unreadCount;
+        if (countDiff !== 0) return countDiff;
+
+        const timeA = unreadA.lastMessageAt ?? "";
+        const timeB = unreadB.lastMessageAt ?? "";
+        const timeDiff = timeB.localeCompare(timeA);
+        if (timeDiff !== 0) return timeDiff;
+      }
+
+      return a.name.localeCompare(b.name);
+    });
+  }, [channels, channelUnreadById]);
+
   useEffect(() => {
     function onCreateChannel() {
       setShowCreateModal(true);
@@ -131,7 +154,7 @@ export default function Sidebar({ workspaceRef }: SidebarProps) {
                   onToggle={() => setChannelsOpen(!channelsOpen)}
                   onAdd={() => setShowCreateModal(true)}
                 >
-                  {channels.map((channel) => (
+                  {sortedChannels.map((channel) => (
                     <ChannelSidebarItem
                       key={channel.id}
                       channel={channel}
