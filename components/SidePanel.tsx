@@ -4,10 +4,10 @@ import { workspaceDomain } from "@/lib/workspace";
 import { useAuth } from "@/lib/auth";
 import { useApp } from "@/lib/context/AppContext";
 import { AppEvents, dispatchLoadDraft } from "@/lib/security/events";
-import { LIMITS } from "@/lib/security";
+import { LIMITS, sanitizeWorkspaceName } from "@/lib/security";
 import { showToast } from "@/lib/toast";
 import { getAvatarColor, messageSenderName } from "@/lib/utils";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function SidePanel() {
   const {
@@ -38,9 +38,16 @@ export default function SidePanel() {
     userStatus,
     setUserStatus,
     activeWorkspace,
+    updateWorkspaceName,
   } = useApp();
   const { user } = useAuth();
   const [dmSearch, setDmSearch] = useState("");
+  const [workspaceNameDraft, setWorkspaceNameDraft] = useState("");
+  const [workspaceNameSaving, setWorkspaceNameSaving] = useState(false);
+
+  useEffect(() => {
+    setWorkspaceNameDraft(activeWorkspace?.name ?? "");
+  }, [activeWorkspace?.id, activeWorkspace?.name]);
 
   const dmCandidates = useMemo(() => {
     const others = members.filter((m) => !m.name.endsWith("(you)"));
@@ -497,10 +504,42 @@ export default function SidePanel() {
           {openPanel === "workspace-settings" && (
             <div className="p-4 space-y-4">
               <div>
-                <p className="text-[13px] font-bold text-[#616061] uppercase mb-2">Workspace name</p>
-                <p className="text-[15px] text-[#1D1C1D]">
-                  {activeWorkspace?.name ?? "Workspace"}
-                </p>
+                <label
+                  htmlFor="workspaceNameEdit"
+                  className="text-[13px] font-bold text-[#616061] uppercase mb-2 block"
+                >
+                  Workspace name
+                </label>
+                <input
+                  id="workspaceNameEdit"
+                  type="text"
+                  value={workspaceNameDraft}
+                  onChange={(e) => setWorkspaceNameDraft(e.target.value)}
+                  maxLength={LIMITS.workspaceName}
+                  className="w-full px-3 py-2 border border-[#E2E2E2] rounded-md text-[15px] focus:outline-none focus:border-[#1264A3]"
+                />
+                <button
+                  type="button"
+                  disabled={
+                    workspaceNameSaving ||
+                    !workspaceNameDraft.trim() ||
+                    workspaceNameDraft.trim() === activeWorkspace?.name
+                  }
+                  onClick={async () => {
+                    const safeName = sanitizeWorkspaceName(workspaceNameDraft);
+                    if (!safeName) {
+                      showToast("Enter a valid workspace name.");
+                      return;
+                    }
+                    setWorkspaceNameSaving(true);
+                    const updated = await updateWorkspaceName(safeName);
+                    setWorkspaceNameSaving(false);
+                    if (updated) setWorkspaceNameDraft(updated.name);
+                  }}
+                  className="mt-2 px-3 py-1.5 bg-[#007A5A] text-white text-[13px] font-bold rounded-md hover:bg-[#148567] disabled:opacity-40"
+                >
+                  {workspaceNameSaving ? "Saving…" : "Save name"}
+                </button>
               </div>
               <div>
                 <p className="text-[13px] font-bold text-[#616061] uppercase mb-2">URL</p>

@@ -202,7 +202,15 @@ begin
     raise exception 'Not authenticated';
   end if;
 
-  perform public.ensure_user_profile();
+  insert into public.profiles (id, display_name)
+  select
+    uid,
+    coalesce(
+      (select raw_user_meta_data ->> 'display_name' from auth.users where id = uid),
+      split_part((select email from auth.users where id = uid), '@', 1),
+      'User'
+    )
+  on conflict (id) do nothing;
 
   new_workspace := public.bootstrap_user_workspace(uid, p_workspace_name);
   return new_workspace;
@@ -224,7 +232,15 @@ begin
     return null;
   end if;
 
-  perform public.ensure_user_profile();
+  insert into public.profiles (id, display_name)
+  select
+    uid,
+    coalesce(
+      (select raw_user_meta_data ->> 'display_name' from auth.users where id = uid),
+      split_part((select email from auth.users where id = uid), '@', 1),
+      'User'
+    )
+  on conflict (id) do nothing;
 
   select wm.workspace_id
   into workspace_id
@@ -274,8 +290,6 @@ begin
       'User'
     )
   on conflict (id) do nothing;
-
-  perform public.ensure_user_workspace();
 end;
 $$;
 

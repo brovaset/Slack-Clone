@@ -3,7 +3,9 @@
 import { useApp } from "@/lib/context/AppContext";
 import { LIMITS } from "@/lib/security";
 import { sanitizeWorkspaceName } from "@/lib/security/sanitize";
+import { getErrorMessage } from "@/lib/supabase/errors";
 import type { Workspace } from "@/lib/types";
+import { showToast } from "@/lib/toast";
 import { useState } from "react";
 
 interface CreateWorkspaceModalProps {
@@ -44,8 +46,10 @@ export default function CreateWorkspaceModal({
       onCreated?.(workspace);
       setName("");
       onClose();
-    } catch {
-      setError("Could not create workspace. Try again.");
+    } catch (err) {
+      const message = getErrorMessage(err, "Could not create workspace. Try again.");
+      setError(message);
+      showToast(message);
     } finally {
       setSubmitting(false);
     }

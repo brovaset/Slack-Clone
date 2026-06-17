@@ -65,6 +65,20 @@ export async function createWorkspace(name: string): Promise<Workspace> {
   return data as Workspace;
 }
 
+export async function updateWorkspaceName(
+  workspaceId: string,
+  name: string
+): Promise<Workspace> {
+  const supabase = requireClient();
+  const { data, error } = await supabase.rpc("update_workspace_name", {
+    p_workspace_id: workspaceId,
+    p_workspace_name: name,
+  });
+  if (error) throw error;
+  if (!data) throw new Error("Workspace was not updated");
+  return data as Workspace;
+}
+
 export async function fetchProfiles(workspaceId: string): Promise<Profile[]> {
   const supabase = requireClient();
   const { data, error } = await supabase.rpc("list_workspace_profiles", {

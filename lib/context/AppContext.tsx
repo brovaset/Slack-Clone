@@ -5,6 +5,7 @@ import {
   addChannelMember,
   createChannel,
   createWorkspace as createWorkspaceApi,
+  updateWorkspaceName as updateWorkspaceNameApi,
   ensureUserProfile,
   ensureUserWorkspace,
   fetchChannelMembers,
@@ -141,6 +142,7 @@ interface AppContextValue {
   openSidebarNav: (view: "threads" | "huddles" | "drafts") => void;
   switchWorkspace: (workspaceId: string) => Promise<void>;
   createWorkspace: (name: string) => Promise<Workspace>;
+  updateWorkspaceName: (name: string) => Promise<Workspace | null>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -307,7 +309,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async (name: string) => {
       const safeName = sanitizeWorkspaceName(name);
       if (!safeName) {
-        throw new Error("Invalid workspace name");
+        throw new Error("Enter a valid workspace name.");
       }
 
       const workspace = await createWorkspaceApi(safeName);
@@ -319,6 +321,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return workspace;
     },
     [switchWorkspace]
+  );
+
+  const updateWorkspaceName = useCallback(
+    async (name: string) => {
+      if (!activeWorkspaceId) return null;
+
+      const safeName = sanitizeWorkspaceName(name);
+      if (!safeName) {
+        showToast("Enter a valid workspace name.");
+        return null;
+      }
+
+      try {
+        const updated = await updateWorkspaceNameApi(activeWorkspaceId, safeName);
+        setWorkspaces((prev) =>
+          prev
+            .map((w) => (w.id === updated.id ? updated : w))
+            .sort((a, b) => a.name.localeCompare(b.name))
+        );
+        showToast("Workspace name updated");
+        return updated;
+      } catch (err) {
+        showToast(getErrorMessage(err, "Failed to update workspace name"));
+        return null;
+      }
+    },
+    [activeWorkspaceId]
   );
 
   useEffect(() => {
@@ -953,6 +982,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         openSidebarNav,
         switchWorkspace,
         createWorkspace,
+        updateWorkspaceName,
       }}
     >
       {children}
