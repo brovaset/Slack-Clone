@@ -29,6 +29,7 @@ export default function IconRail({ displayName, workspaceRef }: IconRailProps) {
     openDm,
     channels,
     openChannel,
+    refreshDms,
     notificationsPaused,
     setNotificationsPaused,
     profileMenuOpen,
@@ -43,7 +44,11 @@ export default function IconRail({ displayName, workspaceRef }: IconRailProps) {
     setProfileMenuOpen(false);
     setWorkspaceMenuOpen(false);
     if (view === "home" && channels[0]) openChannel(channels[0].id);
-    if (view === "dms" && dms[0]) openDm(dms[0].id);
+    if (view === "dms") {
+      refreshDms().then((list) => {
+        if (list.length > 0) openDm(list[0].id);
+      });
+    }
   }
 
   function togglePause() {

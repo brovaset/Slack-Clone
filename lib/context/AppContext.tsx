@@ -55,6 +55,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -119,6 +120,7 @@ interface AppContextValue {
   getDm: (dmId: string) => DirectMessage | undefined;
   openChannel: (channelId: string) => void;
   openDm: (dmId: string) => void;
+  refreshDms: () => Promise<DirectMessage[]>;
   getChannelUnreadInfo: (channelId: string) => ChannelUnreadInfo;
   getChannelLastViewedAt: (channelId: string) => string | null;
   markChannelAsRead: (channelId: string) => void;
@@ -172,6 +174,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setChannelMembers([]);
     }
   }, []);
+
+  const refreshDms = useCallback(async (): Promise<DirectMessage[]> => {
+    if (!user) return [];
+    try {
+      const userDms = await fetchUserDms(user.id, []);
+      setDms(userDms);
+
+      const dmIds = userDms.map((d) => d.id);
+      if (dmIds.length > 0) {
+        const dmMsgs = await fetchDmMessages(dmIds);
+        setDmMessages((prev) => {
+          const byId = new Map(prev.map((m) => [m.id, m]));
+          for (const m of dmMsgs) byId.set(m.id, m);
+          return [...byId.values()].sort((a, b) =>
+            a.created_at.localeCompare(b.created_at)
+          );
+        });
+      }
+      return userDms;
+    } catch {
+      return [];
+    }
+  }, [user]);
+
+  const dmsRef = useRef(dms);
+  useEffect(() => {
+    dmsRef.current = dms;
+  }, [dms]);
+
+  const membersRef = useRef(members);
+  useEffect(() => {
+    membersRef.current = members;
+  }, [members]);
 
   const reloadData = useCallback(async () => {
     if (!user) return;
@@ -235,6 +270,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const supabase = createClient();
     if (!supabase) return;
 
+    let refreshDmsTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefreshDms = () => {
+      if (refreshDmsTimer) clearTimeout(refreshDmsTimer);
+      refreshDmsTimer = setTimeout(() => {
+        refreshDms();
+      }, 400);
+    };
+
     const channel = supabase
       .channel("app-realtime")
       .on(
@@ -244,7 +287,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const raw = payload.new as Message;
           setMessages((prev) => {
             if (prev.some((m) => m.id === raw.id)) return prev;
-            const member = members.find((m) => m.id === raw.user_id);
+            const member = membersRef.current.find((m) => m.id === raw.user_id);
             const senderName = member?.name.replace(/ \(you\)$/, "").trim();
             const msg: Message = {
               ...raw,
@@ -287,7 +330,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             attachment_name?: string | null;
             attachment_type?: string | null;
           };
-          const member = members.find((m) => m.id === raw.user_id);
+          const member = membersRef.current.find((m) => m.id === raw.user_id);
           const senderName = member?.name.replace(/ \(you\)$/, "").trim();
           const msg: DmMessage = {
             id: raw.id,
@@ -311,6 +354,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
             if (prev.some((m) => m.id === msg.id)) return prev;
             return [...prev, msg];
           });
+
+          const convId = raw.conversation_id;
+          const isKnownDm = dmsRef.current.some((d) => d.id === convId);
+          if (!isKnownDm) {
+            scheduleRefreshDms();
+          }
+
+          if (raw.user_id !== user.id) {
+            showToast(`New message from ${senderName ?? "someone"}`);
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "dm_participants" },
+        (payload: RealtimePostgresChangesPayload<{
+          conversation_id: string;
+          user_id: string;
+        }>) => {
+          const row = payload.new as { conversation_id: string; user_id: string };
+          if (row.user_id === user.id) {
+            scheduleRefreshDms();
+          }
         }
       )
       .on(
@@ -337,9 +403,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .subscribe();
 
     return () => {
+      if (refreshDmsTimer) clearTimeout(refreshDmsTimer);
       supabase.removeChannel(channel);
     };
-  }, [user, activeChannelId, loadChannelMembers, members]);
+  }, [user, activeChannelId, loadChannelMembers, refreshDms]);
 
   const openChannel = useCallback((channelId: string) => {
     setRailView("home");
@@ -717,6 +784,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         getDm,
         openChannel,
         openDm,
+        refreshDms,
         getChannelUnreadInfo,
         getChannelLastViewedAt,
         markChannelAsRead,
