@@ -1,6 +1,11 @@
 import { UPLOAD } from "@/lib/security/constants";
 import { sanitizeFileName } from "@/lib/security/sanitize";
 import { requireClient } from "@/lib/supabase/client";
+import {
+  formatUploadError,
+  resolvedMimeForUpload,
+  validateChatUpload,
+} from "@/lib/uploadValidation";
 
 export interface UploadedAttachment {
   url: string;
@@ -8,16 +13,7 @@ export interface UploadedAttachment {
   type: string;
 }
 
-export function validateChatUpload(file: File): string | null {
-  if (file.size > UPLOAD.maxBytes) {
-    return `File must be under ${UPLOAD.maxBytes / (1024 * 1024)} MB`;
-  }
-  const mime = file.type || "application/octet-stream";
-  if (!(UPLOAD.allowedMimeTypes as readonly string[]).includes(mime)) {
-    return "File type not allowed. Use images, PDF, or text files.";
-  }
-  return null;
-}
+export { formatBytes, validateChatUpload } from "@/lib/uploadValidation";
 
 export async function uploadChatFile(file: File, userId: string): Promise<UploadedAttachment> {
   const error = validateChatUpload(file);
@@ -26,19 +22,24 @@ export async function uploadChatFile(file: File, userId: string): Promise<Upload
   const supabase = requireClient();
   const safeName = sanitizeFileName(file.name);
   const path = `${userId}/${crypto.randomUUID()}-${safeName}`;
+  const contentType = resolvedMimeForUpload(file);
 
   const { error: uploadError } = await supabase.storage
     .from(UPLOAD.bucket)
-    .upload(path, file, { cacheControl: "3600", upsert: false });
+    .upload(path, file, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType,
+    });
 
-  if (uploadError) throw uploadError;
+  if (uploadError) throw new Error(formatUploadError(uploadError));
 
   const { data } = supabase.storage.from(UPLOAD.bucket).getPublicUrl(path);
 
   return {
     url: data.publicUrl,
     name: safeName,
-    type: file.type || "application/octet-stream",
+    type: contentType,
   };
 }
 

@@ -79,10 +79,10 @@ export default function ChannelFeed({ displayName, userId }: ChannelFeedProps) {
     return () => document.removeEventListener(AppEvents.loadDraft, onLoadDraft);
   }, []);
 
-  function handleSend(text: string, file?: File) {
+  async function handleSend(text: string, file?: File) {
     if (!activeChannelId) return;
     if (!text && !file) return;
-    addMessage(activeChannelId, userId, displayName, text, file);
+    await addMessage(activeChannelId, userId, displayName, text, file);
     setNewMessage("");
     markChannelAsRead(activeChannelId);
   }

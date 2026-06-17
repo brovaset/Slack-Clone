@@ -4,14 +4,15 @@ import { EMOJI_LIST } from "@/lib/constants";
 import { useApp } from "@/lib/context/AppContext";
 import { LIMITS } from "@/lib/security";
 import { showToast } from "@/lib/toast";
-import { isImageAttachment, validateChatUpload } from "@/lib/uploads";
+import { ALLOWED_FILE_EXTENSIONS } from "@/lib/uploadValidation";
+import { formatBytes, isImageAttachment, validateChatUpload } from "@/lib/uploads";
 import { useEffect, useRef, useState } from "react";
 
 interface MessageComposerProps {
   placeholder: string;
   value: string;
   onChange: (v: string) => void;
-  onSend: (text: string, file?: File) => void;
+  onSend: (text: string, file?: File) => Promise<void>;
   target: string;
   targetType: "channel" | "dm";
 }
@@ -31,6 +32,7 @@ export default function MessageComposer({
   const [showMentions, setShowMentions] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -99,13 +101,23 @@ export default function MessageComposer({
     if (value.trim()) saveDraft(value, target, targetType);
   }
 
-  function handleSend() {
+  async function handleSend() {
     if (!value.trim() && !pendingFile) return;
-    onSend(value.trim(), pendingFile ?? undefined);
-    clearPendingFile();
+    if (isSending) return;
+
+    setIsSending(true);
+    try {
+      await onSend(value.trim(), pendingFile ?? undefined);
+      onChange("");
+      clearPendingFile();
+    } catch {
+      // Parent shows toast; keep pending file so user can retry or remove.
+    } finally {
+      setIsSending(false);
+    }
   }
 
-  const canSend = value.trim().length > 0 || pendingFile !== null;
+  const canSend = !isSending && (value.trim().length > 0 || pendingFile !== null);
   const mentionCandidates = members.filter((m) => !m.name.endsWith("(you)"));
 
   return (
@@ -144,7 +156,7 @@ export default function MessageComposer({
         ref={fileInputRef}
         type="file"
         className="hidden"
-        accept="image/jpeg,image/png,image/gif,image/webp,.pdf,.txt"
+        accept={ALLOWED_FILE_EXTENSIONS.join(",")}
         onChange={handleFileChange}
       />
 
@@ -170,7 +182,9 @@ export default function MessageComposer({
               )}
               <div className="flex-1 min-w-0 pt-1">
                 <p className="text-[13px] font-bold text-[#1D1C1D] truncate">{pendingFile.name}</p>
-                <p className="text-[12px] text-[#616061]">Ready to send</p>
+                <p className="text-[12px] text-[#616061]">
+                  {formatBytes(pendingFile.size)} · Ready to send
+                </p>
               </div>
               <button
                 type="button"
@@ -233,7 +247,7 @@ export default function MessageComposer({
                 type="submit"
                 disabled={!canSend}
                 className="p-1.5 rounded disabled:opacity-30 hover:bg-[#F8F8F8] transition-colors"
-                title="Send"
+                title={isSending ? "Uploading…" : "Send"}
               >
                 <SendArrowIcon active={canSend} />
               </button>

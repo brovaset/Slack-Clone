@@ -23,6 +23,7 @@ import { getErrorMessage } from "@/lib/supabase/errors";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { showToast } from "@/lib/toast";
 import { uploadChatFile } from "@/lib/uploads";
+import { formatUploadError } from "@/lib/uploadValidation";
 import {
   RATE_LIMITS,
   checkRateLimit,
@@ -511,7 +512,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           return [...prev, withSender];
         });
       } catch (err) {
-        showToast(getErrorMessage(err, "Failed to send message"));
+        showToast(formatUploadError(err, "Failed to send message"));
+        throw err;
       }
     },
     []
@@ -558,7 +560,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           return [...prev, withSender];
         });
       } catch (err) {
-        showToast(getErrorMessage(err, "Failed to send message"));
+        showToast(formatUploadError(err, "Failed to send message"));
+        throw err;
       }
     },
     []
