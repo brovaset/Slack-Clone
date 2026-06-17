@@ -29,7 +29,6 @@ export default function IconRail({ displayName, workspaceRef }: IconRailProps) {
     railView,
     setRailView,
     setOpenPanel,
-    dms,
     openDm,
     channels,
     openChannel,
@@ -40,6 +39,9 @@ export default function IconRail({ displayName, workspaceRef }: IconRailProps) {
     setProfileMenuOpen,
     workspaceMenuOpen,
     setWorkspaceMenuOpen,
+    workspaces,
+    activeWorkspace,
+    switchWorkspace,
     userStatus,
   } = useApp();
 
@@ -85,18 +87,41 @@ export default function IconRail({ displayName, workspaceRef }: IconRailProps) {
   return (
     <>
       <nav className="w-[68px] min-w-[68px] bg-[#4A154B] flex flex-col items-center pt-2 pb-3 shrink-0 h-screen relative z-40">
-        <div className="flex flex-col items-center w-full">
-          <button
-            ref={workspaceRef}
-            onClick={toggleWorkspaceMenu}
-            title="Slack Clone"
-            className={`mb-2 p-1 rounded-[10px] transition-colors ${
-              workspaceMenuOpen ? "bg-[#6b2b6d]" : "hover:bg-[#5a1f5c]"
-            }`}
-          >
-            <WorkspaceIcon size="rail" variant="rail" />
-          </button>
+        <div className="flex flex-col items-center w-full gap-1">
+          {workspaces.map((ws) => (
+            <button
+              key={ws.id}
+              type="button"
+              ref={ws.id === activeWorkspace?.id ? workspaceRef : undefined}
+              onClick={() => {
+                if (ws.id === activeWorkspace?.id) {
+                  toggleWorkspaceMenu();
+                } else {
+                  switchWorkspace(ws.id);
+                }
+              }}
+              title={ws.name}
+              className={`p-1 rounded-[10px] transition-colors ${
+                ws.id === activeWorkspace?.id && workspaceMenuOpen
+                  ? "bg-[#6b2b6d]"
+                  : ws.id === activeWorkspace?.id
+                    ? "bg-[#5a1f5c]"
+                    : "hover:bg-[#5a1f5c]"
+              }`}
+            >
+              <WorkspaceIcon
+                workspace={ws}
+                size="rail"
+                variant="rail"
+                selected={ws.id === activeWorkspace?.id}
+              />
+            </button>
+          ))}
+        </div>
 
+        <div className="w-full h-px bg-white/10 my-1" />
+
+        <div className="flex flex-col items-center w-full">
           {RAIL_ITEMS.map(({ id, label, icon: Icon }) => {
             const active = railView === id;
             return (

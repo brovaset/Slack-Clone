@@ -1,6 +1,6 @@
 "use client";
 
-import { WORKSPACE_NAME, WORKSPACE_URL } from "@/components/WorkspaceMenu";
+import { workspaceDomain } from "@/lib/workspace";
 import { useAuth } from "@/lib/auth";
 import { useApp } from "@/lib/context/AppContext";
 import { AppEvents, dispatchLoadDraft } from "@/lib/security/events";
@@ -37,6 +37,7 @@ export default function SidePanel() {
     setCustomStatus,
     userStatus,
     setUserStatus,
+    activeWorkspace,
   } = useApp();
   const { user } = useAuth();
   const [dmSearch, setDmSearch] = useState("");
@@ -477,8 +478,12 @@ export default function SidePanel() {
                 onClick={close}
                 className="w-full px-4 py-3 text-left hover:bg-[#F8F8F8]"
               >
-                <p className="text-[15px] font-bold text-[#1D1C1D]">{WORKSPACE_NAME}</p>
-                <p className="text-[13px] text-[#616061]">{WORKSPACE_URL}</p>
+                <p className="text-[15px] font-bold text-[#1D1C1D]">
+                  {activeWorkspace?.name ?? "Workspace"}
+                </p>
+                <p className="text-[13px] text-[#616061]">
+                  {activeWorkspace ? workspaceDomain(activeWorkspace.slug) : ""}
+                </p>
               </button>
               <button
                 onClick={() => setOpenPanel("workspace-settings")}
@@ -493,11 +498,15 @@ export default function SidePanel() {
             <div className="p-4 space-y-4">
               <div>
                 <p className="text-[13px] font-bold text-[#616061] uppercase mb-2">Workspace name</p>
-                <p className="text-[15px] text-[#1D1C1D]">{WORKSPACE_NAME}</p>
+                <p className="text-[15px] text-[#1D1C1D]">
+                  {activeWorkspace?.name ?? "Workspace"}
+                </p>
               </div>
               <div>
                 <p className="text-[13px] font-bold text-[#616061] uppercase mb-2">URL</p>
-                <p className="text-[15px] text-[#1D1C1D]">{WORKSPACE_URL}</p>
+                <p className="text-[15px] text-[#1D1C1D]">
+                  {activeWorkspace ? workspaceDomain(activeWorkspace.slug) : ""}
+                </p>
               </div>
               <div>
                 <p className="text-[13px] font-bold text-[#616061] uppercase mb-2">Members</p>

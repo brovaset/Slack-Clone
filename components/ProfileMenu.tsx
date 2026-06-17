@@ -1,10 +1,9 @@
 "use client";
 
-import { WORKSPACE_NAME } from "@/components/WorkspaceMenu";
 import { StatusDot } from "@/components/StatusMenu";
-import { LIMITS } from "@/lib/security";
 import { useAuth } from "@/lib/auth";
 import { useApp } from "@/lib/context/AppContext";
+import { LIMITS } from "@/lib/security";
 import { showToast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type RefObject } from "react";
@@ -35,6 +34,7 @@ export default function ProfileMenu({
     setCustomStatus,
     setOpenPanel,
     setProfileMenuOpen,
+    activeWorkspace,
   } = useApp();
   const [editingStatus, setEditingStatus] = useState(false);
   const [statusDraft, setStatusDraft] = useState(customStatus);
@@ -200,7 +200,7 @@ export default function ProfileMenu({
       <MenuDivider />
 
       <MenuItem onClick={handleSignOut}>
-        Sign out of {WORKSPACE_NAME}
+        Sign out of {activeWorkspace?.name ?? "workspace"}
       </MenuItem>
     </div>
   );

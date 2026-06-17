@@ -13,11 +13,20 @@ export interface ChannelMember {
   member: Member;
 }
 
+export interface Workspace {
+  id: string;
+  name: string;
+  slug: string;
+  created_by: string | null;
+  created_at: string;
+}
+
 export interface Channel {
   id: string;
   name: string;
   description: string | null;
   created_at: string;
+  workspace_id: string;
 }
 
 export interface Message {

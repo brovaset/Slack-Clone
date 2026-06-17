@@ -25,6 +25,7 @@ export default function Sidebar({ workspaceRef }: SidebarProps) {
     workspaceMenuOpen,
     setWorkspaceMenuOpen,
     channelUnreadMap,
+    activeWorkspace,
     openSidebarNav,
   } = useApp();
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -94,7 +95,7 @@ export default function Sidebar({ workspaceRef }: SidebarProps) {
               workspaceMenuOpen ? "bg-[#350D36]" : "hover:bg-[#350D36]"
             }`}
           >
-            <span className="truncate">Slack Clone</span>
+            <span className="truncate">{activeWorkspace?.name ?? "Workspace"}</span>
             <ChevronDown className={workspaceMenuOpen ? "rotate-180" : ""} />
           </button>
           <button

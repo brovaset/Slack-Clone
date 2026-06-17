@@ -4,13 +4,16 @@ import { useAuth } from "@/lib/auth";
 import {
   addChannelMember,
   createChannel,
+  createWorkspace as createWorkspaceApi,
   ensureUserProfile,
+  ensureUserWorkspace,
   fetchChannelMembers,
   fetchChannelMessages,
   fetchDmMessages,
   fetchProfiles,
   fetchUserChannels,
   fetchUserDms,
+  fetchWorkspaces,
   getOrCreateDm,
   profilesToMembers,
   removeChannelMember,
@@ -18,6 +21,7 @@ import {
   sendDmMessage,
   updateProfile,
 } from "@/lib/data";
+import { getStoredWorkspaceId, setStoredWorkspaceId } from "@/lib/workspaceStorage";
 import { createClient } from "@/lib/supabase/client";
 import { getErrorMessage } from "@/lib/supabase/errors";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
@@ -34,6 +38,7 @@ import {
   sanitizeMessage,
   sanitizeSearchQuery,
   sanitizeStatus,
+  sanitizeWorkspaceName,
 } from "@/lib/security";
 import type {
   Channel,
@@ -46,6 +51,7 @@ import type {
   PanelType,
   RailView,
   UserStatus,
+  Workspace,
 } from "@/lib/types";
 import {
   type ChannelUnreadInfo,
@@ -70,6 +76,9 @@ interface AppContextValue {
   drafts: Draft[];
   members: Member[];
   channelMembers: ChannelMember[];
+  workspaces: Workspace[];
+  activeWorkspaceId: string | null;
+  activeWorkspace: Workspace | undefined;
   railView: RailView;
   activeChannelId: string | null;
   activeDmId: string | null;
@@ -130,6 +139,8 @@ interface AppContextValue {
   setComposerText: (key: string, text: string) => void;
   clearComposerText: (key: string) => void;
   openSidebarNav: (view: "threads" | "huddles" | "drafts") => void;
+  switchWorkspace: (workspaceId: string) => Promise<void>;
+  createWorkspace: (name: string) => Promise<Workspace>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -144,6 +155,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [channelMembers, setChannelMembers] = useState<ChannelMember[]>([]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
   const [railView, setRailView] = useState<RailView>("home");
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
   const [activeDmId, setActiveDmId] = useState<string | null>(null);
@@ -157,6 +170,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [huddleActive, setHuddleActive] = useState(false);
   const [huddleLabel, setHuddleLabel] = useState<string | null>(null);
   const [composerTexts, setComposerTexts] = useState<Record<string, string>>({});
+
+  const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
+
+  const channelsRef = useRef(channels);
+  useEffect(() => {
+    channelsRef.current = channels;
+  }, [channels]);
 
   const {
     getChannelUnreadInfo,
@@ -182,9 +202,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshDms = useCallback(async (): Promise<DirectMessage[]> => {
-    if (!user) return [];
+    if (!user || !activeWorkspaceId) return [];
     try {
-      const userDms = await fetchUserDms(user.id, []);
+      const userDms = await fetchUserDms(activeWorkspaceId, user.id, []);
       setDms(userDms);
 
       const dmIds = userDms.map((d) => d.id);
@@ -197,12 +217,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
             a.created_at.localeCompare(b.created_at)
           );
         });
+      } else {
+        setDmMessages([]);
       }
       return userDms;
     } catch {
       return [];
     }
-  }, [user]);
+  }, [user, activeWorkspaceId]);
 
   const dmsRef = useRef(dms);
   useEffect(() => {
@@ -214,12 +236,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     membersRef.current = members;
   }, [members]);
 
-  const reloadData = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      await ensureUserProfile();
-      const profiles = await fetchProfiles();
+  const reloadWorkspaceData = useCallback(
+    async (workspaceId: string) => {
+      if (!user) return;
+
+      const profiles = await fetchProfiles(workspaceId);
       setMembers(profilesToMembers(profiles, user.id));
 
       const myProfile = profiles.find((p) => p.id === user.id);
@@ -228,39 +249,128 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setUserStatusState(myProfile.user_status ?? "active");
       }
 
-      const userChannels = await fetchUserChannels(user.id);
+      const userChannels = await fetchUserChannels(workspaceId, user.id);
       setChannels(userChannels);
-      if (!activeChannelId && userChannels.length > 0) {
-        setActiveChannelId(userChannels[0].id);
-      }
+      setActiveChannelId(userChannels[0]?.id ?? null);
+      setActiveDmId(null);
 
       const channelIds = userChannels.map((c) => c.id);
       const channelMsgs = await fetchChannelMessages(channelIds);
       setMessages(channelMsgs);
 
-      const userDms = await fetchUserDms(user.id, profiles);
+      const userDms = await fetchUserDms(workspaceId, user.id, profiles);
       setDms(userDms);
 
       const dmIds = userDms.map((d) => d.id);
       const dmMsgs = await fetchDmMessages(dmIds);
       setDmMessages(dmMsgs);
 
-      if (activeChannelId) {
-        await loadChannelMembers(activeChannelId);
+      const firstChannelId = userChannels[0]?.id;
+      if (firstChannelId) {
+        await loadChannelMembers(firstChannelId);
+      } else {
+        setChannelMembers([]);
       }
-    } catch (err) {
-      showToast(getErrorMessage(err, "Failed to load data"));
-    } finally {
-      setLoading(false);
-    }
-  }, [user, activeChannelId, loadChannelMembers]);
+    },
+    [user, loadChannelMembers]
+  );
+
+  const switchWorkspace = useCallback(
+    async (workspaceId: string) => {
+      if (!user || workspaceId === activeWorkspaceId) return;
+
+      setLoading(true);
+      setChannels([]);
+      setMessages([]);
+      setDms([]);
+      setDmMessages([]);
+      setChannelMembers([]);
+      setActiveChannelId(null);
+      setActiveDmId(null);
+      setRailView("home");
+      setOpenPanel(null);
+      setActiveWorkspaceId(workspaceId);
+      setStoredWorkspaceId(user.id, workspaceId);
+
+      try {
+        await reloadWorkspaceData(workspaceId);
+      } catch (err) {
+        showToast(getErrorMessage(err, "Failed to load workspace"));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user, activeWorkspaceId, reloadWorkspaceData]
+  );
+
+  const createWorkspace = useCallback(
+    async (name: string) => {
+      const safeName = sanitizeWorkspaceName(name);
+      if (!safeName) {
+        throw new Error("Invalid workspace name");
+      }
+
+      const workspace = await createWorkspaceApi(safeName);
+      setWorkspaces((prev) =>
+        [...prev, workspace].sort((a, b) => a.name.localeCompare(b.name))
+      );
+      await switchWorkspace(workspace.id);
+      showToast(`Workspace "${workspace.name}" created`);
+      return workspace;
+    },
+    [switchWorkspace]
+  );
 
   useEffect(() => {
     if (!user) {
       setLoading(false);
+      setWorkspaces([]);
+      setActiveWorkspaceId(null);
       return;
     }
-    reloadData();
+
+    const currentUser = user;
+    let cancelled = false;
+
+    async function init() {
+      setLoading(true);
+      try {
+        await ensureUserProfile();
+        let list = await fetchWorkspaces();
+
+        if (list.length === 0) {
+          await ensureUserWorkspace();
+          list = await fetchWorkspaces();
+        }
+
+        if (cancelled) return;
+
+        setWorkspaces(list);
+
+        const stored = getStoredWorkspaceId(currentUser.id);
+        const initial =
+          list.find((w) => w.id === stored)?.id ?? list[0]?.id ?? null;
+
+        if (!initial) {
+          return;
+        }
+
+        setActiveWorkspaceId(initial);
+        setStoredWorkspaceId(currentUser.id, initial);
+        await reloadWorkspaceData(initial);
+      } catch (err) {
+        if (!cancelled) {
+          showToast(getErrorMessage(err, "Failed to load data"));
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    init();
+    return () => {
+      cancelled = true;
+    };
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -291,6 +401,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         { event: "INSERT", schema: "public", table: "messages" },
         (payload: RealtimePostgresChangesPayload<Message>) => {
           const raw = payload.new as Message;
+          const channelIds = new Set(channelsRef.current.map((c) => c.id));
+          if (!channelIds.has(raw.channel_id)) return;
           setMessages((prev) => {
             if (prev.some((m) => m.id === raw.id)) return prev;
             const member = membersRef.current.find((m) => m.id === raw.user_id);
@@ -336,6 +448,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
             attachment_name?: string | null;
             attachment_type?: string | null;
           };
+          const convId = raw.conversation_id;
+          const isKnownDm = dmsRef.current.some((d) => d.id === convId);
+          if (!isKnownDm) {
+            scheduleRefreshDms();
+            return;
+          }
+
           const member = membersRef.current.find((m) => m.id === raw.user_id);
           const senderName = member?.name.replace(/ \(you\)$/, "").trim();
           const msg: DmMessage = {
@@ -360,12 +479,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             if (prev.some((m) => m.id === msg.id)) return prev;
             return [...prev, msg];
           });
-
-          const convId = raw.conversation_id;
-          const isKnownDm = dmsRef.current.some((d) => d.id === convId);
-          if (!isKnownDm) {
-            scheduleRefreshDms();
-          }
 
           if (raw.user_id !== user.id) {
             showToast(`New message from ${senderName ?? "someone"}`);
@@ -463,7 +576,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addChannel = useCallback(
     async (name: string, description?: string) => {
-      if (!user) return null;
+      if (!user || !activeWorkspaceId) return null;
 
       const rate = checkRateLimit(
         "channel:create",
@@ -483,6 +596,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       try {
         const created = await createChannel(
+          activeWorkspaceId,
           normalized,
           description ? sanitizeChannelDescription(description) : null,
           user.id
@@ -501,7 +615,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return null;
       }
     },
-    [user]
+    [user, activeWorkspaceId]
   );
 
   const addMessage = useCallback(
@@ -607,7 +721,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const openDmWithMember = useCallback(
     async (member: Member) => {
-      if (!user) return;
+      if (!user || !activeWorkspaceId) return;
       const otherId = member.id;
       const cleanName = member.name.replace(/ \(you\)$/, "");
 
@@ -618,7 +732,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        const convId = await getOrCreateDm(user.id, otherId);
+        const convId = await getOrCreateDm(activeWorkspaceId, user.id, otherId);
         const newDm: DirectMessage = {
           id: convId,
           name: cleanName,
@@ -632,7 +746,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         showToast(getErrorMessage(err, "Failed to open DM"));
       }
     },
-    [user, dms, openDm]
+    [user, dms, openDm, activeWorkspaceId]
   );
 
   const addMemberToChannel = useCallback(
@@ -786,6 +900,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         drafts,
         members,
         channelMembers,
+        workspaces,
+        activeWorkspaceId,
+        activeWorkspace,
         railView,
         activeChannelId,
         activeDmId,
@@ -834,6 +951,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setComposerText,
         clearComposerText,
         openSidebarNav,
+        switchWorkspace,
+        createWorkspace,
       }}
     >
       {children}

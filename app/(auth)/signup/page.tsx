@@ -21,6 +21,7 @@ export default function SignupPage() {
   const router = useRouter();
   const { user, loading: authLoading, signUp } = useAuth();
   const [displayName, setDisplayName] = useState("");
+  const [workspaceName, setWorkspaceName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -41,7 +42,8 @@ export default function SignupPage() {
     const result = await signUp(
       displayName || email.split("@")[0] || "User",
       email,
-      password
+      password,
+      workspaceName || displayName || email.split("@")[0] || "My Workspace"
     );
     if (result.error) {
       setError(result.error);
@@ -57,7 +59,7 @@ export default function SignupPage() {
     <div className="min-h-screen flex">
       <AuthHero />
       <AuthFormWrapper
-        title="First, enter your email"
+        title="Name your workspace"
         footer={
           <AuthFooterLink text="Already using Slack?" linkText="Sign in" href="/login" />
         }
@@ -70,6 +72,15 @@ export default function SignupPage() {
             onChange={setDisplayName}
             placeholder="Ex. John Smith"
             maxLength={LIMITS.displayName}
+            required
+          />
+          <AuthField
+            id="workspaceName"
+            label="Workspace name"
+            value={workspaceName}
+            onChange={setWorkspaceName}
+            placeholder="Ex. Acme Marketing"
+            maxLength={LIMITS.workspaceName}
             required
           />
           <AuthField

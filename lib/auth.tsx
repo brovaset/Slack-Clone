@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { sanitizeDisplayName } from "@/lib/security";
+import { sanitizeDisplayName, sanitizeWorkspaceName } from "@/lib/security";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import {
   createContext,
@@ -25,7 +25,8 @@ interface AuthContextValue {
   signUp: (
     displayName: string,
     email: string,
-    password: string
+    password: string,
+    workspaceName?: string
   ) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
 }
@@ -101,7 +102,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signUp = useCallback(
-    async (displayName: string, email: string, password: string) => {
+    async (
+      displayName: string,
+      email: string,
+      password: string,
+      workspaceName?: string
+    ) => {
       if (!supabase) {
         return {
           error:
@@ -111,11 +117,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const safeName = sanitizeDisplayName(displayName);
       if (!safeName) return { error: "Enter a valid display name." };
 
+      const safeWorkspace = workspaceName
+        ? sanitizeWorkspaceName(workspaceName)
+        : null;
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { display_name: safeName },
+          data: {
+            display_name: safeName,
+            ...(safeWorkspace ? { workspace_name: safeWorkspace } : {}),
+          },
         },
       });
       if (error) return { error: formatAuthError(error.message) };

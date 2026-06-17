@@ -9,6 +9,7 @@ import type {
   Member,
   Message,
   Profile,
+  Workspace,
 } from "@/lib/types";
 
 type AttachmentRow = {
@@ -40,9 +41,35 @@ export async function ensureUserProfile(): Promise<void> {
   if (error) throw error;
 }
 
-export async function fetchProfiles(): Promise<Profile[]> {
+export async function ensureUserWorkspace(): Promise<string> {
   const supabase = requireClient();
-  const { data, error } = await supabase.rpc("list_workspace_profiles");
+  const { data, error } = await supabase.rpc("ensure_user_workspace");
+  if (error) throw error;
+  return data as string;
+}
+
+export async function fetchWorkspaces(): Promise<Workspace[]> {
+  const supabase = requireClient();
+  const { data, error } = await supabase.rpc("get_my_workspaces");
+  if (error) throw error;
+  return (data ?? []) as Workspace[];
+}
+
+export async function createWorkspace(name: string): Promise<Workspace> {
+  const supabase = requireClient();
+  const { data, error } = await supabase.rpc("create_workspace", {
+    p_workspace_name: name,
+  });
+  if (error) throw error;
+  if (!data) throw new Error("Workspace was not created");
+  return data as Workspace;
+}
+
+export async function fetchProfiles(workspaceId: string): Promise<Profile[]> {
+  const supabase = requireClient();
+  const { data, error } = await supabase.rpc("list_workspace_profiles", {
+    p_workspace_id: workspaceId,
+  });
   if (error) throw error;
   return (data ?? []).map((p: {
     id: string;
@@ -59,9 +86,14 @@ export async function fetchProfiles(): Promise<Profile[]> {
   }));
 }
 
-export async function fetchUserChannels(_userId: string): Promise<Channel[]> {
+export async function fetchUserChannels(
+  workspaceId: string,
+  _userId: string
+): Promise<Channel[]> {
   const supabase = requireClient();
-  const { data, error } = await supabase.rpc("get_my_channels");
+  const { data, error } = await supabase.rpc("get_my_channels", {
+    p_workspace_id: workspaceId,
+  });
   if (error) throw error;
   return (data ?? []) as Channel[];
 }
@@ -163,11 +195,14 @@ export async function fetchChannelMembers(channelId: string): Promise<ChannelMem
 }
 
 export async function fetchUserDms(
+  workspaceId: string,
   _userId: string,
   _profiles: Profile[]
 ): Promise<DirectMessage[]> {
   const supabase = requireClient();
-  const { data, error } = await supabase.rpc("get_my_dms");
+  const { data, error } = await supabase.rpc("get_my_dms", {
+    p_workspace_id: workspaceId,
+  });
   if (error) throw error;
 
   return (data ?? []).map((row: {
@@ -224,12 +259,14 @@ export async function fetchDmMessages(conversationIds: string[]): Promise<DmMess
 }
 
 export async function createChannel(
+  workspaceId: string,
   name: string,
   description: string | null,
   _userId: string
 ): Promise<Channel> {
   const supabase = requireClient();
   const { data, error } = await supabase.rpc("create_channel", {
+    p_workspace_id: workspaceId,
     channel_name: name,
     channel_description: description,
   });
@@ -286,11 +323,13 @@ export async function sendChannelMessage(
 }
 
 export async function getOrCreateDm(
+  workspaceId: string,
   _currentUserId: string,
   otherUserId: string
 ): Promise<string> {
   const supabase = requireClient();
   const { data, error } = await supabase.rpc("get_or_create_dm", {
+    p_workspace_id: workspaceId,
     p_other_user_id: otherUserId,
   });
   if (error) throw error;
