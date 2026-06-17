@@ -25,6 +25,7 @@ export default function Sidebar({ workspaceRef }: SidebarProps) {
     workspaceMenuOpen,
     setWorkspaceMenuOpen,
     channelUnreadMap,
+    openSidebarNav,
   } = useApp();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [channelsOpen, setChannelsOpen] = useState(true);
@@ -122,22 +123,49 @@ export default function Sidebar({ workspaceRef }: SidebarProps) {
 
         <div className="px-3 pb-2">
           <button
-            onClick={() => setOpenPanel("threads")}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[#D1D2D3] hover:bg-[#350D36] text-[15px] transition-colors"
+            type="button"
+            onClick={() => {
+              setProfileMenuOpen(false);
+              setWorkspaceMenuOpen(false);
+              openSidebarNav("threads");
+            }}
+            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[15px] transition-colors ${
+              railView === "threads"
+                ? "bg-[#350D36] text-white font-bold"
+                : "text-[#D1D2D3] hover:bg-[#350D36]"
+            }`}
           >
             <WriteIcon />
             <span>Threads</span>
           </button>
           <button
-            onClick={() => setOpenPanel("huddles")}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[#D1D2D3] hover:bg-[#350D36] text-[15px] transition-colors"
+            type="button"
+            onClick={() => {
+              setProfileMenuOpen(false);
+              setWorkspaceMenuOpen(false);
+              openSidebarNav("huddles");
+            }}
+            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[15px] transition-colors ${
+              railView === "huddles"
+                ? "bg-[#350D36] text-white font-bold"
+                : "text-[#D1D2D3] hover:bg-[#350D36]"
+            }`}
           >
             <HeadphonesIcon />
             <span>Huddles</span>
           </button>
           <button
-            onClick={() => setOpenPanel("drafts")}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[#D1D2D3] hover:bg-[#350D36] text-[15px] transition-colors"
+            type="button"
+            onClick={() => {
+              setProfileMenuOpen(false);
+              setWorkspaceMenuOpen(false);
+              openSidebarNav("drafts");
+            }}
+            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[15px] transition-colors ${
+              railView === "drafts"
+                ? "bg-[#350D36] text-white font-bold"
+                : "text-[#D1D2D3] hover:bg-[#350D36]"
+            }`}
           >
             <SendIcon />
             <span>Drafts &amp; sent</span>

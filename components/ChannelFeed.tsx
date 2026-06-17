@@ -4,6 +4,7 @@ import { useApp } from "@/lib/context/AppContext";
 import { AppEvents, parseLoadDraftDetail } from "@/lib/security/events";
 import { buildChannelFeedItems } from "@/lib/messageFeed";
 import { useChannelEngagement } from "@/hooks/useChannelEngagement";
+import { useConversationComposer } from "@/hooks/useConversationComposer";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import HuddleBanner from "./HuddleBanner";
 import MessageComposer from "./MessageComposer";
@@ -27,11 +28,15 @@ export default function ChannelFeed({ displayName, userId }: ChannelFeedProps) {
     getChannelLastViewedAt,
     markChannelAsRead,
   } = useApp();
-  const [newMessage, setNewMessage] = useState("");
   const [newMessagesDividerAt, setNewMessagesDividerAt] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const channel = activeChannelId ? getChannel(activeChannelId) : undefined;
+  const { text: newMessage, setText: setNewMessage, clearAfterSend } = useConversationComposer(
+    activeChannelId,
+    "channel",
+    channel?.name ?? ""
+  );
   const allMessages = activeChannelId ? getChannelMessages(activeChannelId) : [];
   const messages = searchQuery.trim()
     ? allMessages.filter((m) =>
@@ -77,13 +82,13 @@ export default function ChannelFeed({ displayName, userId }: ChannelFeedProps) {
     }
     document.addEventListener(AppEvents.loadDraft, onLoadDraft);
     return () => document.removeEventListener(AppEvents.loadDraft, onLoadDraft);
-  }, []);
+  }, [setNewMessage]);
 
   async function handleSend(text: string, file?: File) {
     if (!activeChannelId) return;
     if (!text && !file) return;
     await addMessage(activeChannelId, userId, displayName, text, file);
-    setNewMessage("");
+    clearAfterSend();
     markChannelAsRead(activeChannelId);
   }
 

@@ -75,7 +75,15 @@ export interface ActivityItem {
   created_at: string;
 }
 
-export type RailView = "home" | "dms" | "activity" | "files" | "more";
+export type RailView =
+  | "home"
+  | "dms"
+  | "activity"
+  | "files"
+  | "more"
+  | "threads"
+  | "huddles"
+  | "drafts";
 
 export type PanelType =
   | "members"

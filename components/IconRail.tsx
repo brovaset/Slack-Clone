@@ -1,10 +1,12 @@
 "use client";
 
 import ProfileMenu, { ProfileAvatar } from "@/components/ProfileMenu";
+import StatusMenu from "@/components/StatusMenu";
 import { WorkspaceIcon } from "@/components/WorkspaceMenu";
 import { useApp } from "@/lib/context/AppContext";
 import type { RailView } from "@/lib/types";
-import { useRef, type RefObject } from "react";
+import { showToast } from "@/lib/toast";
+import { useRef, useState, type RefObject } from "react";
 
 const RAIL_ITEMS: { id: RailView; label: string; icon: React.FC<{ active?: boolean }> }[] = [
   { id: "home", label: "Home", icon: HomeIcon },
@@ -21,6 +23,8 @@ interface IconRailProps {
 
 export default function IconRail({ displayName, workspaceRef }: IconRailProps) {
   const profileRef = useRef<HTMLButtonElement>(null);
+  const statusRef = useRef<HTMLButtonElement>(null);
+  const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const {
     railView,
     setRailView,
@@ -36,6 +40,7 @@ export default function IconRail({ displayName, workspaceRef }: IconRailProps) {
     setProfileMenuOpen,
     workspaceMenuOpen,
     setWorkspaceMenuOpen,
+    userStatus,
   } = useApp();
 
   function handleNav(view: RailView) {
@@ -52,11 +57,21 @@ export default function IconRail({ displayName, workspaceRef }: IconRailProps) {
   }
 
   function togglePause() {
-    setNotificationsPaused(!notificationsPaused);
+    const next = !notificationsPaused;
+    setNotificationsPaused(next);
+    showToast(next ? "Notifications paused" : "Notifications resumed");
   }
 
   function toggleProfileMenu() {
+    setStatusMenuOpen(false);
     setProfileMenuOpen(!profileMenuOpen);
+    setOpenPanel(null);
+    setWorkspaceMenuOpen(false);
+  }
+
+  function toggleStatusMenu() {
+    setProfileMenuOpen(false);
+    setStatusMenuOpen(!statusMenuOpen);
     setOpenPanel(null);
     setWorkspaceMenuOpen(false);
   }
@@ -128,6 +143,7 @@ export default function IconRail({ displayName, workspaceRef }: IconRailProps) {
           <button
             onClick={togglePause}
             title={notificationsPaused ? "Resume notifications" : "Pause notifications"}
+            aria-label={notificationsPaused ? "Resume notifications" : "Pause notifications"}
             className={`w-7 h-7 rounded-full flex items-center justify-center text-white transition-colors ${
               notificationsPaused ? "bg-[#6b2b6d]" : "bg-[#5a1f5c] hover:bg-[#6b2b6d]"
             }`}
@@ -135,23 +151,49 @@ export default function IconRail({ displayName, workspaceRef }: IconRailProps) {
             <MoonIcon />
           </button>
 
-          <button
-            ref={profileRef}
-            onClick={toggleProfileMenu}
-            title={displayName}
-            className={`relative transition-all ${
-              profileMenuOpen ? "ring-2 ring-white/60 rounded-[8px]" : "hover:ring-2 hover:ring-white/40 rounded-[8px]"
-            }`}
-          >
-            <ProfileAvatar />
-            {notificationsPaused && (
-              <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#2BAC76] border-2 border-[#4A154B] flex items-center justify-center text-[9px] font-bold text-white pointer-events-none">
-                z
-              </span>
-            )}
-          </button>
+          <div className="relative">
+            <button
+              ref={profileRef}
+              onClick={toggleProfileMenu}
+              title={`${displayName} — open profile menu`}
+              className={`relative transition-all ${
+                profileMenuOpen
+                  ? "ring-2 ring-white/60 rounded-[8px]"
+                  : "hover:ring-2 hover:ring-white/40 rounded-[8px]"
+              }`}
+            >
+              <ProfileAvatar showStatus />
+              {notificationsPaused && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#2BAC76] border-2 border-[#4A154B] flex items-center justify-center text-[9px] font-bold text-white pointer-events-none">
+                  z
+                </span>
+              )}
+            </button>
+            <button
+              ref={statusRef}
+              type="button"
+              onClick={toggleStatusMenu}
+              title="Set your status"
+              aria-label="Set your status"
+              className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-[#4A154B] shadow-sm transition-transform hover:scale-110 ${
+                statusMenuOpen ? "ring-2 ring-white/70" : ""
+              } ${
+                userStatus === "active"
+                  ? "bg-[#2BAC76]"
+                  : userStatus === "dnd"
+                    ? "bg-[#E01E5A]"
+                    : "bg-[#ABABAD]"
+              }`}
+            />
+          </div>
         </div>
       </nav>
+
+      <StatusMenu
+        open={statusMenuOpen}
+        onClose={() => setStatusMenuOpen(false)}
+        anchorRef={statusRef}
+      />
 
       <ProfileMenu
         displayName={displayName}

@@ -126,6 +126,10 @@ interface AppContextValue {
   getChannelLastViewedAt: (channelId: string) => string | null;
   markChannelAsRead: (channelId: string) => void;
   channelUnreadMap: Record<string, ChannelUnreadInfo>;
+  getComposerText: (key: string) => string;
+  setComposerText: (key: string, text: string) => void;
+  clearComposerText: (key: string) => void;
+  openSidebarNav: (view: "threads" | "huddles" | "drafts") => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -152,6 +156,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [customStatus, setCustomStatusState] = useState("");
   const [huddleActive, setHuddleActive] = useState(false);
   const [huddleLabel, setHuddleLabel] = useState<string | null>(null);
+  const [composerTexts, setComposerTexts] = useState<Record<string, string>>({});
 
   const {
     getChannelUnreadInfo,
@@ -421,6 +426,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setActiveChannelId(null);
     setActiveDmId(dmId);
     setOpenPanel(null);
+  }, []);
+
+  const openSidebarNav = useCallback((view: "threads" | "huddles" | "drafts") => {
+    setRailView(view);
+    setActiveChannelId(null);
+    setActiveDmId(null);
+    setOpenPanel(null);
+    setWorkspaceMenuOpen(false);
+  }, []);
+
+  const getComposerText = useCallback(
+    (key: string) => composerTexts[key] ?? "",
+    [composerTexts]
+  );
+
+  const setComposerText = useCallback((key: string, text: string) => {
+    setComposerTexts((prev) => {
+      if (!text) {
+        if (!prev[key]) return prev;
+        const { [key]: _, ...rest } = prev;
+        return rest;
+      }
+      if (prev[key] === text) return prev;
+      return { ...prev, [key]: text };
+    });
+  }, []);
+
+  const clearComposerText = useCallback((key: string) => {
+    setComposerTexts((prev) => {
+      if (!prev[key]) return prev;
+      const { [key]: _, ...rest } = prev;
+      return rest;
+    });
   }, []);
 
   const addChannel = useCallback(
@@ -792,6 +830,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         getChannelLastViewedAt,
         markChannelAsRead,
         channelUnreadMap,
+        getComposerText,
+        setComposerText,
+        clearComposerText,
+        openSidebarNav,
       }}
     >
       {children}

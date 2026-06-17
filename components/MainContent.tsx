@@ -4,7 +4,10 @@ import { useApp } from "@/lib/context/AppContext";
 import { getAvatarColor, messageSenderName } from "@/lib/utils";
 import ChannelFeed from "./ChannelFeed";
 import DmFeed from "./DmFeed";
+import DraftsView from "./DraftsView";
+import HuddlesView from "./HuddlesView";
 import MoreView from "./MoreView";
+import ThreadsView from "./ThreadsView";
 
 interface MainContentProps {
   displayName: string;
@@ -130,6 +133,18 @@ export default function MainContent({ displayName, userId }: MainContentProps) {
 
   if (railView === "more") {
     return <MoreView />;
+  }
+
+  if (railView === "threads") {
+    return <ThreadsView />;
+  }
+
+  if (railView === "huddles") {
+    return <HuddlesView />;
+  }
+
+  if (railView === "drafts") {
+    return <DraftsView />;
   }
 
   return null;

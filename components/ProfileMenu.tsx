@@ -1,6 +1,7 @@
 "use client";
 
 import { WORKSPACE_NAME } from "@/components/WorkspaceMenu";
+import { StatusDot } from "@/components/StatusMenu";
 import { LIMITS } from "@/lib/security";
 import { useAuth } from "@/lib/auth";
 import { useApp } from "@/lib/context/AppContext";
@@ -205,13 +206,21 @@ export default function ProfileMenu({
   );
 }
 
-export function ProfileAvatar({ size = "sm" }: { size?: "sm" | "lg" }) {
+export function ProfileAvatar({
+  size = "sm",
+  showStatus = false,
+}: {
+  size?: "sm" | "lg";
+  showStatus?: boolean;
+}) {
+  const { userStatus } = useApp();
   const dims = size === "lg" ? "w-9 h-9" : "w-9 h-9";
   return (
     <div
-      className={`${dims} rounded-[8px] bg-[#5B2C6F] text-white flex items-center justify-center shrink-0`}
+      className={`relative ${dims} rounded-[8px] bg-[#5B2C6F] text-white flex items-center justify-center shrink-0`}
     >
       <PersonIcon className={size === "lg" ? "w-5 h-5" : "w-[18px] h-[18px]"} />
+      {showStatus && <StatusDot status={userStatus} />}
     </div>
   );
 }

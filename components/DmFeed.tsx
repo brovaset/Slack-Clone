@@ -2,9 +2,10 @@
 
 import { useApp } from "@/lib/context/AppContext";
 import { AppEvents, parseLoadDraftDetail } from "@/lib/security/events";
+import { useConversationComposer } from "@/hooks/useConversationComposer";
 import type { DmMessage } from "@/lib/types";
 import { formatDateDivider, getAvatarColor } from "@/lib/utils";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import HuddleBanner from "./HuddleBanner";
 import MessageComposer from "./MessageComposer";
 import MessageItem from "./MessageItem";
@@ -16,10 +17,14 @@ interface DmFeedProps {
 
 export default function DmFeed({ displayName, userId }: DmFeedProps) {
   const { activeDmId, getDm, getDmMessages, addDmMessage, setOpenPanel, startHuddle } = useApp();
-  const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const dm = activeDmId ? getDm(activeDmId) : undefined;
+  const { text: newMessage, setText: setNewMessage, clearAfterSend } = useConversationComposer(
+    activeDmId,
+    "dm",
+    dm?.name ?? ""
+  );
   const messages = activeDmId ? getDmMessages(activeDmId) : [];
 
   const feedItems = useMemo(() => {
@@ -54,13 +59,13 @@ export default function DmFeed({ displayName, userId }: DmFeedProps) {
     }
     document.addEventListener(AppEvents.loadDraft, onLoadDraft);
     return () => document.removeEventListener(AppEvents.loadDraft, onLoadDraft);
-  }, []);
+  }, [setNewMessage]);
 
   async function handleSend(text: string, file?: File) {
     if (!activeDmId) return;
     if (!text && !file) return;
     await addDmMessage(activeDmId, userId, displayName, text, file);
-    setNewMessage("");
+    clearAfterSend();
   }
 
   if (!activeDmId || !dm) {
